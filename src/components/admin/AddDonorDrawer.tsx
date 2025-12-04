@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Loader2, User, Phone, Activity, Shield, Check } from "lucide-react";
+import { Loader2, User, Phone, Activity, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -9,14 +9,19 @@ import {
   SheetTitle,
   SheetDescription,
 } from "@/components/ui/sheet";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { PersonalInfoTab } from "./add-donor/PersonalInfoTab";
-import { ContactInfoTab } from "./add-donor/ContactInfoTab";
-import { PhysicalMedicalTab } from "./add-donor/PhysicalMedicalTab";
-import { EligibilityTab } from "./add-donor/EligibilityTab";
 
 interface AddDonorDrawerProps {
   open: boolean;
@@ -24,11 +29,32 @@ interface AddDonorDrawerProps {
   onSuccess: () => void;
 }
 
+const US_STATES = [
+  "AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA",
+  "HI", "ID", "IL", "IN", "IA", "KS", "KY", "LA", "ME", "MD",
+  "MA", "MI", "MN", "MS", "MO", "MT", "NE", "NV", "NH", "NJ",
+  "NM", "NY", "NC", "ND", "OH", "OK", "OR", "PA", "RI", "SC",
+  "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY"
+];
+
+const formatPhoneNumber = (value: string) => {
+  const numbers = value.replace(/\D/g, "");
+  if (numbers.length <= 3) return numbers;
+  if (numbers.length <= 6) return `(${numbers.slice(0, 3)}) ${numbers.slice(3)}`;
+  return `(${numbers.slice(0, 3)}) ${numbers.slice(3, 6)}-${numbers.slice(6, 10)}`;
+};
+
+const formatSSN = (value: string) => {
+  const numbers = value.replace(/\D/g, "");
+  if (numbers.length <= 3) return numbers;
+  if (numbers.length <= 5) return `${numbers.slice(0, 3)}-${numbers.slice(3)}`;
+  return `${numbers.slice(0, 3)}-${numbers.slice(3, 5)}-${numbers.slice(5, 9)}`;
+};
+
 const AddDonorDrawer = ({ open, onOpenChange, onSuccess }: AddDonorDrawerProps) => {
   const { toast } = useToast();
   const { user } = useAuth();
   const [saving, setSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState("personal");
 
   const [formData, setFormData] = useState({
     first_name: "",
@@ -111,27 +137,19 @@ const AddDonorDrawer = ({ open, onOpenChange, onSuccess }: AddDonorDrawerProps) 
       cmv_positive: "",
       social_security: "",
     });
-    setActiveTab("personal");
   };
 
-  // Check if required fields in each tab are filled
-  const isPersonalComplete = formData.first_name && formData.last_name && formData.birth_date && formData.assigned_sex;
-  const isContactComplete = true; // No required fields
-  const isPhysicalComplete = true; // No required fields
-  const isEligibilityComplete = true; // Has defaults
-
-  const canSubmit = isPersonalComplete;
+  const canSubmit = formData.first_name && formData.last_name && formData.birth_date && formData.assigned_sex;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.first_name || !formData.last_name || !formData.birth_date || !formData.assigned_sex) {
+    if (!canSubmit) {
       toast({
         title: "Missing required fields",
         description: "Please fill in First Name, Last Name, Date of Birth, and Assigned Sex.",
         variant: "destructive",
       });
-      setActiveTab("personal");
       return;
     }
 
@@ -194,81 +212,371 @@ const AddDonorDrawer = ({ open, onOpenChange, onSuccess }: AddDonorDrawerProps) 
     }
   };
 
-  const TabIndicator = ({ isComplete }: { isComplete: boolean }) => (
-    isComplete ? (
-      <Check className="h-3 w-3 text-green-500" />
-    ) : null
+  const SectionHeader = ({ icon: Icon, title }: { icon: React.ElementType; title: string }) => (
+    <div className="flex items-center gap-2 pb-2 pt-4 first:pt-0 border-b border-border/50">
+      <Icon className="h-4 w-4 text-muted-foreground" />
+      <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+    </div>
   );
+
+  const getBmiStatus = () => {
+    const bmiNum = parseFloat(bmi);
+    if (isNaN(bmiNum)) return null;
+    if (bmiNum < 18.5) return { label: "Underweight", color: "text-yellow-600" };
+    if (bmiNum < 25) return { label: "Normal", color: "text-green-600" };
+    if (bmiNum < 30) return { label: "Overweight", color: "text-yellow-600" };
+    return { label: "Obese", color: "text-red-600" };
+  };
+
+  const bmiStatus = getBmiStatus();
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-xl overflow-hidden flex flex-col">
-        <SheetHeader className="pb-4 border-b">
+      <SheetContent className="w-full sm:max-w-xl overflow-hidden flex flex-col p-0">
+        <SheetHeader className="px-6 pt-6 pb-4 border-b">
           <SheetTitle className="text-xl">Add New Donor</SheetTitle>
           <SheetDescription>
-            Enter donor information across the tabs below. Required fields are marked with *.
+            Required fields are marked with *
           </SheetDescription>
         </SheetHeader>
 
-        <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden pt-4">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col flex-1 overflow-hidden">
-            <TabsList className="grid w-full grid-cols-4 mb-4">
-              <TabsTrigger value="personal" className="flex items-center gap-1.5 text-xs sm:text-sm">
-                <User className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Personal</span>
-                <TabIndicator isComplete={!!isPersonalComplete} />
-              </TabsTrigger>
-              <TabsTrigger value="contact" className="flex items-center gap-1.5 text-xs sm:text-sm">
-                <Phone className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Contact</span>
-                <TabIndicator isComplete={isContactComplete} />
-              </TabsTrigger>
-              <TabsTrigger value="physical" className="flex items-center gap-1.5 text-xs sm:text-sm">
-                <Activity className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Physical</span>
-                <TabIndicator isComplete={isPhysicalComplete} />
-              </TabsTrigger>
-              <TabsTrigger value="eligibility" className="flex items-center gap-1.5 text-xs sm:text-sm">
-                <Shield className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Eligibility</span>
-                <TabIndicator isComplete={isEligibilityComplete} />
-              </TabsTrigger>
-            </TabsList>
-
-            <div className="flex-1 overflow-y-auto pr-2">
-              <TabsContent value="personal" className="mt-0 h-full">
-                <PersonalInfoTab
-                  formData={formData}
-                  updateField={updateField}
-                  age={age}
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+          <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+            
+            {/* PERSONAL INFO */}
+            <SectionHeader icon={User} title="Personal Information" />
+            
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="first_name">First Name *</Label>
+                <Input
+                  id="first_name"
+                  value={formData.first_name}
+                  onChange={(e) => updateField("first_name", e.target.value)}
+                  placeholder="John"
                 />
-              </TabsContent>
-
-              <TabsContent value="contact" className="mt-0 h-full">
-                <ContactInfoTab
-                  formData={formData}
-                  updateField={updateField}
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="last_name">Last Name *</Label>
+                <Input
+                  id="last_name"
+                  value={formData.last_name}
+                  onChange={(e) => updateField("last_name", e.target.value)}
+                  placeholder="Doe"
                 />
-              </TabsContent>
-
-              <TabsContent value="physical" className="mt-0 h-full">
-                <PhysicalMedicalTab
-                  formData={formData}
-                  updateField={updateField}
-                  bmi={bmi}
-                />
-              </TabsContent>
-
-              <TabsContent value="eligibility" className="mt-0 h-full">
-                <EligibilityTab
-                  formData={formData}
-                  updateField={updateField}
-                />
-              </TabsContent>
+              </div>
             </div>
-          </Tabs>
 
-          <SheetFooter className="pt-4 border-t mt-4 flex-row gap-2 sm:gap-0">
+            <div className="grid grid-cols-3 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="middle_initial">M.I.</Label>
+                <Input
+                  id="middle_initial"
+                  value={formData.middle_initial}
+                  onChange={(e) => updateField("middle_initial", e.target.value.slice(0, 1).toUpperCase())}
+                  maxLength={1}
+                  placeholder="A"
+                />
+              </div>
+              <div className="col-span-2 space-y-1.5">
+                <Label htmlFor="chosen_name">Chosen Name</Label>
+                <Input
+                  id="chosen_name"
+                  value={formData.chosen_name}
+                  onChange={(e) => updateField("chosen_name", e.target.value)}
+                  placeholder="Preferred name"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="birth_date">Date of Birth *</Label>
+                <div className="relative">
+                  <Input
+                    id="birth_date"
+                    type="date"
+                    value={formData.birth_date}
+                    onChange={(e) => updateField("birth_date", e.target.value)}
+                  />
+                  {age !== null && (
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                      {age} yrs
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Assigned Sex *</Label>
+                <Select value={formData.assigned_sex} onValueChange={(v) => updateField("assigned_sex", v)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="male">Male</SelectItem>
+                    <SelectItem value="female">Female</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Ethnicity</Label>
+                <Select value={formData.ethnicity} onValueChange={(v) => updateField("ethnicity", v)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="No Answer">No Answer</SelectItem>
+                    <SelectItem value="Hispanic or Latino">Hispanic or Latino</SelectItem>
+                    <SelectItem value="Not Hispanic or Latino">Not Hispanic or Latino</SelectItem>
+                    <SelectItem value="Unknown">Unknown</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="pronouns">Pronouns</Label>
+                <Input
+                  id="pronouns"
+                  value={formData.pronouns}
+                  onChange={(e) => updateField("pronouns", e.target.value)}
+                  placeholder="e.g. he/him"
+                />
+              </div>
+            </div>
+
+            {/* CONTACT INFO */}
+            <SectionHeader icon={Phone} title="Contact Information" />
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="cell_phone">Cell Phone</Label>
+                <Input
+                  id="cell_phone"
+                  value={formData.cell_phone}
+                  onChange={(e) => updateField("cell_phone", formatPhoneNumber(e.target.value))}
+                  placeholder="(555) 123-4567"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => updateField("email", e.target.value)}
+                  placeholder="john@example.com"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="home_phone">Home Phone</Label>
+                <Input
+                  id="home_phone"
+                  value={formData.home_phone}
+                  onChange={(e) => updateField("home_phone", formatPhoneNumber(e.target.value))}
+                  placeholder="(555) 123-4567"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="work_phone">Work Phone</Label>
+                <Input
+                  id="work_phone"
+                  value={formData.work_phone}
+                  onChange={(e) => updateField("work_phone", formatPhoneNumber(e.target.value))}
+                  placeholder="(555) 123-4567"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="address_line_1">Address</Label>
+              <Input
+                id="address_line_1"
+                value={formData.address_line_1}
+                onChange={(e) => updateField("address_line_1", e.target.value)}
+                placeholder="Street address"
+              />
+            </div>
+
+            <Input
+              id="address_line_2"
+              value={formData.address_line_2}
+              onChange={(e) => updateField("address_line_2", e.target.value)}
+              placeholder="Apt, suite, unit, etc."
+            />
+
+            <div className="grid grid-cols-5 gap-3">
+              <div className="col-span-2 space-y-1.5">
+                <Label htmlFor="city">City</Label>
+                <Input
+                  id="city"
+                  value={formData.city}
+                  onChange={(e) => updateField("city", e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>State</Label>
+                <Select value={formData.state} onValueChange={(v) => updateField("state", v)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="—" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {US_STATES.map((state) => (
+                      <SelectItem key={state} value={state}>{state}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="col-span-2 space-y-1.5">
+                <Label htmlFor="postal_code">ZIP</Label>
+                <Input
+                  id="postal_code"
+                  value={formData.postal_code}
+                  onChange={(e) => updateField("postal_code", e.target.value.slice(0, 10))}
+                  placeholder="12345"
+                />
+              </div>
+            </div>
+
+            {/* PHYSICAL & MEDICAL */}
+            <SectionHeader icon={Activity} title="Physical & Medical" />
+
+            <div className="grid grid-cols-3 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="height_inches">Height (in)</Label>
+                <Input
+                  id="height_inches"
+                  type="number"
+                  value={formData.height_inches}
+                  onChange={(e) => updateField("height_inches", e.target.value)}
+                  placeholder="66"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="weight_pounds">Weight (lbs)</Label>
+                <Input
+                  id="weight_pounds"
+                  type="number"
+                  value={formData.weight_pounds}
+                  onChange={(e) => updateField("weight_pounds", e.target.value)}
+                  placeholder="150"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>BMI</Label>
+                <div className="h-9 px-3 py-2 rounded-md border bg-muted/50 text-sm flex items-center gap-2">
+                  <span>{bmi}</span>
+                  {bmiStatus && (
+                    <span className={`text-xs ${bmiStatus.color}`}>({bmiStatus.label})</span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-3">
+              <div className="space-y-1.5">
+                <Label>CMV Status</Label>
+                <Select value={formData.cmv_positive} onValueChange={(v) => updateField("cmv_positive", v)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Unknown" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="unknown">Unknown</SelectItem>
+                    <SelectItem value="positive">Positive</SelectItem>
+                    <SelectItem value="negative">Negative</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Alcohol Use</Label>
+                <RadioGroup
+                  value={formData.alcohol_use}
+                  onValueChange={(v) => updateField("alcohol_use", v)}
+                  className="flex gap-4 h-9 items-center"
+                >
+                  <div className="flex items-center gap-1.5">
+                    <RadioGroupItem value="yes" id="alcohol_yes" />
+                    <Label htmlFor="alcohol_yes" className="font-normal text-sm">Yes</Label>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <RadioGroupItem value="no" id="alcohol_no" />
+                    <Label htmlFor="alcohol_no" className="font-normal text-sm">No</Label>
+                  </div>
+                </RadioGroup>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Tobacco Use</Label>
+                <RadioGroup
+                  value={formData.tobacco_use}
+                  onValueChange={(v) => updateField("tobacco_use", v)}
+                  className="flex gap-4 h-9 items-center"
+                >
+                  <div className="flex items-center gap-1.5">
+                    <RadioGroupItem value="yes" id="tobacco_yes" />
+                    <Label htmlFor="tobacco_yes" className="font-normal text-sm">Yes</Label>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <RadioGroupItem value="no" id="tobacco_no" />
+                    <Label htmlFor="tobacco_no" className="font-normal text-sm">No</Label>
+                  </div>
+                </RadioGroup>
+              </div>
+            </div>
+
+            {/* ELIGIBILITY */}
+            <SectionHeader icon={Shield} title="Eligibility & Compliance" />
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Eligibility Status</Label>
+                <Select value={formData.eligibility_status} onValueChange={(v) => updateField("eligibility_status", v)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="eligible">Eligible</SelectItem>
+                    <SelectItem value="pending_review">Pending Review</SelectItem>
+                    <SelectItem value="ineligible">Ineligible</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Ineligibility Reason</Label>
+                <Select value={formData.ineligibility_reason} onValueChange={(v) => updateField("ineligibility_reason", v)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="N/A">N/A</SelectItem>
+                    <SelectItem value="Medical Condition">Medical Condition</SelectItem>
+                    <SelectItem value="Age Requirement">Age Requirement</SelectItem>
+                    <SelectItem value="BMI Out of Range">BMI Out of Range</SelectItem>
+                    <SelectItem value="Failed Screening">Failed Screening</SelectItem>
+                    <SelectItem value="Withdrew">Withdrew</SelectItem>
+                    <SelectItem value="Other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="social_security">Social Security Number</Label>
+              <Input
+                id="social_security"
+                value={formData.social_security}
+                onChange={(e) => updateField("social_security", formatSSN(e.target.value))}
+                placeholder="XXX-XX-XXXX"
+                maxLength={11}
+              />
+            </div>
+
+          </div>
+
+          <SheetFooter className="px-6 py-4 border-t bg-muted/30 flex-row gap-2 sm:gap-2">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="flex-1 sm:flex-none">
               Cancel
             </Button>
