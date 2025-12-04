@@ -213,7 +213,7 @@ const AddDonorDrawer = ({ open, onOpenChange, onSuccess }: AddDonorDrawerProps) 
   };
 
   const SectionHeader = ({ icon: Icon, title }: { icon: React.ElementType; title: string }) => (
-    <div className="flex items-center gap-2 pb-2 pt-4 first:pt-0 border-b border-border/50">
+    <div className="flex items-center gap-2 pb-2 pt-6 mt-2 first:pt-0 first:mt-0 border-b border-border/50">
       <Icon className="h-4 w-4 text-muted-foreground" />
       <h3 className="text-sm font-semibold text-foreground">{title}</h3>
     </div>
