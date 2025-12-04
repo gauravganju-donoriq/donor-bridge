@@ -17,7 +17,7 @@ const formSchema = z.object({
   // Step 1: Contact Info
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
-  phone: z.string().min(10, "Valid phone number is required"),
+  phone: z.string().min(14, "Valid phone number is required"),
   email: z.string().email("Valid email is required"),
   streetAddress: z.string().min(1, "Street address is required"),
   addressLine2: z.string().optional(),
@@ -70,7 +70,7 @@ const PreScreenForm = () => {
     defaultValues: {
       firstName: "John",
       lastName: "Doe",
-      phone: "5551234567",
+      phone: "(555) 123-4567",
       email: "john.doe@example.com",
       streetAddress: "123 Main Street",
       addressLine2: "Apt 4B",
