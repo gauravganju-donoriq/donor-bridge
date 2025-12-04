@@ -202,8 +202,21 @@ const EditDonorDrawer = ({ open, onOpenChange, onSuccess, donor }: EditDonorDraw
       error = "First name is required";
     } else if (field === "last_name" && !value.trim()) {
       error = "Last name is required";
-    } else if (field === "birth_date" && !value) {
-      error = "Date of birth is required";
+    } else if (field === "birth_date") {
+      if (!value) {
+        error = "Date of birth is required";
+      } else {
+        const today = new Date();
+        const birth = new Date(value);
+        let calculatedAge = today.getFullYear() - birth.getFullYear();
+        const monthDiff = today.getMonth() - birth.getMonth();
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+          calculatedAge--;
+        }
+        if (calculatedAge < 18) {
+          error = "Donor must be at least 18 years old";
+        }
+      }
     } else if (field === "assigned_sex" && !value) {
       error = "Assigned sex is required";
     } else if (field === "email" && value && !emailRegex.test(value)) {
@@ -219,7 +232,20 @@ const EditDonorDrawer = ({ open, onOpenChange, onSuccess, donor }: EditDonorDraw
     const newErrors: Record<string, string> = {};
     if (!formData.first_name.trim()) newErrors.first_name = "First name is required";
     if (!formData.last_name.trim()) newErrors.last_name = "Last name is required";
-    if (!formData.birth_date) newErrors.birth_date = "Date of birth is required";
+    if (!formData.birth_date) {
+      newErrors.birth_date = "Date of birth is required";
+    } else {
+      const today = new Date();
+      const birth = new Date(formData.birth_date);
+      let calculatedAge = today.getFullYear() - birth.getFullYear();
+      const monthDiff = today.getMonth() - birth.getMonth();
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+        calculatedAge--;
+      }
+      if (calculatedAge < 18) {
+        newErrors.birth_date = "Donor must be at least 18 years old";
+      }
+    }
     if (!formData.assigned_sex) newErrors.assigned_sex = "Assigned sex is required";
     setErrors(newErrors);
     setTouched({ first_name: true, last_name: true, birth_date: true, assigned_sex: true });
