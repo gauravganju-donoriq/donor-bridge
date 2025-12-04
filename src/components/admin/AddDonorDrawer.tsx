@@ -620,6 +620,9 @@ const AddDonorDrawer = ({ open, onOpenChange, onSuccess }: AddDonorDrawerProps) 
             <Button type="button" variant="outline" onClick={() => handleClose()} className="flex-1 sm:flex-none">
               Cancel
             </Button>
+            <Button type="button" variant="ghost" onClick={resetForm} disabled={!isDirty} className="flex-1 sm:flex-none">
+              Reset Form
+            </Button>
             <Button type="submit" disabled={saving || !canSubmit} className="flex-1 sm:flex-none">
               {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Add Donor
