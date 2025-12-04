@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, User, Phone, Activity, Shield, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -8,19 +8,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { PersonalInfoTab } from "./add-donor/PersonalInfoTab";
+import { ContactInfoTab } from "./add-donor/ContactInfoTab";
+import { PhysicalMedicalTab } from "./add-donor/PhysicalMedicalTab";
+import { EligibilityTab } from "./add-donor/EligibilityTab";
 
 interface AddDonorDialogProps {
   open: boolean;
@@ -28,38 +23,11 @@ interface AddDonorDialogProps {
   onSuccess: () => void;
 }
 
-const ETHNICITY_OPTIONS = [
-  "No Answer",
-  "American Indian or Alaska Native",
-  "Asian",
-  "Black or African American",
-  "Hispanic or Latino",
-  "Native Hawaiian or Other Pacific Islander",
-  "White",
-  "Two or More Races",
-  "Other",
-];
-
-const PRONOUNS_OPTIONS = [
-  "He/Him",
-  "She/Her",
-  "They/Them",
-  "Other",
-];
-
-const INELIGIBILITY_REASONS = [
-  "N/A",
-  "Age",
-  "BMI",
-  "Medical History",
-  "Travel History",
-  "Other",
-];
-
 const AddDonorDialog = ({ open, onOpenChange, onSuccess }: AddDonorDialogProps) => {
   const { toast } = useToast();
   const { user } = useAuth();
   const [saving, setSaving] = useState(false);
+  const [activeTab, setActiveTab] = useState("personal");
 
   const [formData, setFormData] = useState({
     first_name: "",
@@ -93,11 +61,22 @@ const AddDonorDialog = ({ open, onOpenChange, onSuccess }: AddDonorDialogProps) 
     const height = parseFloat(formData.height_inches);
     const weight = parseFloat(formData.weight_pounds);
     if (height > 0 && weight > 0) {
-      // BMI = (weight in pounds * 703) / (height in inches)^2
       return ((weight * 703) / (height * height)).toFixed(1);
     }
-    return "NaN";
+    return "—";
   }, [formData.height_inches, formData.weight_pounds]);
+
+  const age = useMemo(() => {
+    if (!formData.birth_date) return null;
+    const today = new Date();
+    const birth = new Date(formData.birth_date);
+    let calculatedAge = today.getFullYear() - birth.getFullYear();
+    const monthDiff = today.getMonth() - birth.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+      calculatedAge--;
+    }
+    return calculatedAge;
+  }, [formData.birth_date]);
 
   const updateField = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -131,7 +110,16 @@ const AddDonorDialog = ({ open, onOpenChange, onSuccess }: AddDonorDialogProps) 
       cmv_positive: "",
       social_security: "",
     });
+    setActiveTab("personal");
   };
+
+  // Check if required fields in each tab are filled
+  const isPersonalComplete = formData.first_name && formData.last_name && formData.birth_date && formData.assigned_sex;
+  const isContactComplete = true; // No required fields
+  const isPhysicalComplete = true; // No required fields
+  const isEligibilityComplete = true; // Has defaults
+
+  const canSubmit = isPersonalComplete;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -142,6 +130,7 @@ const AddDonorDialog = ({ open, onOpenChange, onSuccess }: AddDonorDialogProps) 
         description: "Please fill in First Name, Last Name, Date of Birth, and Assigned Sex.",
         variant: "destructive",
       });
+      setActiveTab("personal");
       return;
     }
 
@@ -150,7 +139,7 @@ const AddDonorDialog = ({ open, onOpenChange, onSuccess }: AddDonorDialogProps) 
       const { data, error } = await supabase
         .from("donors")
         .insert([{
-          donor_id: "TEMP", // Will be overwritten by trigger
+          donor_id: "TEMP",
           first_name: formData.first_name,
           last_name: formData.last_name,
           middle_initial: formData.middle_initial || null,
@@ -163,7 +152,7 @@ const AddDonorDialog = ({ open, onOpenChange, onSuccess }: AddDonorDialogProps) 
           pronouns: formData.pronouns || null,
           height_inches: formData.height_inches ? parseInt(formData.height_inches) : null,
           weight_pounds: formData.weight_pounds ? parseInt(formData.weight_pounds) : null,
-          bmi: bmi !== "NaN" ? parseFloat(bmi) : null,
+          bmi: bmi !== "—" ? parseFloat(bmi) : null,
           cell_phone: formData.cell_phone || null,
           home_phone: formData.home_phone || null,
           work_phone: formData.work_phone || null,
@@ -204,357 +193,83 @@ const AddDonorDialog = ({ open, onOpenChange, onSuccess }: AddDonorDialogProps) 
     }
   };
 
+  const TabIndicator = ({ isComplete }: { isComplete: boolean }) => (
+    isComplete ? (
+      <Check className="h-3 w-3 text-green-500" />
+    ) : null
+  );
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle>Add New Donor</DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Row 1: First Name, Last Name, Middle Initial, Chosen Name */}
-          <div className="grid grid-cols-4 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="first_name">First Name</Label>
-              <Input
-                id="first_name"
-                value={formData.first_name}
-                onChange={(e) => updateField("first_name", e.target.value)}
-                required
-              />
-              <p className="text-xs text-muted-foreground">Donor's first name is required</p>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="last_name">Last Name</Label>
-              <Input
-                id="last_name"
-                value={formData.last_name}
-                onChange={(e) => updateField("last_name", e.target.value)}
-                required
-              />
-              <p className="text-xs text-muted-foreground">Donor's last name is required</p>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="middle_initial">Middle Initial</Label>
-              <Input
-                id="middle_initial"
-                value={formData.middle_initial}
-                onChange={(e) => updateField("middle_initial", e.target.value)}
-                maxLength={1}
-                className="w-16"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="chosen_name">Chosen Name</Label>
-              <Input
-                id="chosen_name"
-                value={formData.chosen_name}
-                onChange={(e) => updateField("chosen_name", e.target.value)}
-              />
-            </div>
-          </div>
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col flex-1 overflow-hidden">
+            <TabsList className="grid w-full grid-cols-4">
+              <TabsTrigger value="personal" className="flex items-center gap-1.5">
+                <User className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Personal</span>
+                <TabIndicator isComplete={!!isPersonalComplete} />
+              </TabsTrigger>
+              <TabsTrigger value="contact" className="flex items-center gap-1.5">
+                <Phone className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Contact</span>
+                <TabIndicator isComplete={isContactComplete} />
+              </TabsTrigger>
+              <TabsTrigger value="physical" className="flex items-center gap-1.5">
+                <Activity className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Physical</span>
+                <TabIndicator isComplete={isPhysicalComplete} />
+              </TabsTrigger>
+              <TabsTrigger value="eligibility" className="flex items-center gap-1.5">
+                <Shield className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Eligibility</span>
+                <TabIndicator isComplete={isEligibilityComplete} />
+              </TabsTrigger>
+            </TabsList>
 
-          {/* Row 2: Birth Date, Eligibility, Ineligibility Reason */}
-          <div className="grid grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="birth_date">Birth Date</Label>
-              <Input
-                id="birth_date"
-                type="date"
-                value={formData.birth_date}
-                onChange={(e) => updateField("birth_date", e.target.value)}
-                required
-              />
-              <p className="text-xs text-muted-foreground">Donor must be no younger than 18 and no older than 45</p>
-            </div>
-            <div className="space-y-2">
-              <Label>Eligibility</Label>
-              <Select
-                value={formData.eligibility_status}
-                onValueChange={(value) => updateField("eligibility_status", value)}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="eligible">Eligible</SelectItem>
-                  <SelectItem value="ineligible">Ineligible</SelectItem>
-                  <SelectItem value="pending_review">Pending Review</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Ineligibility Reason</Label>
-              <Select
-                value={formData.ineligibility_reason}
-                onValueChange={(value) => updateField("ineligibility_reason", value)}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {INELIGIBILITY_REASONS.map((reason) => (
-                    <SelectItem key={reason} value={reason}>{reason}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+            <div className="flex-1 overflow-y-auto px-1">
+              <TabsContent value="personal" className="mt-0">
+                <PersonalInfoTab
+                  formData={formData}
+                  updateField={updateField}
+                  age={age}
+                />
+              </TabsContent>
 
-          {/* Row 3: Donor ID (readonly), Assigned Sex, Ethnicity, Pronouns */}
-          <div className="grid grid-cols-4 gap-4">
-            <div className="space-y-2">
-              <Label>Donor ID</Label>
-              <Input
-                value=""
-                disabled
-                placeholder="Auto-generated"
-                className="bg-muted"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Assigned Sex at Birth</Label>
-              <RadioGroup
-                value={formData.assigned_sex}
-                onValueChange={(value) => updateField("assigned_sex", value)}
-                className="flex gap-4 pt-2"
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="male" id="male" />
-                  <Label htmlFor="male" className="font-normal">Male</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="female" id="female" />
-                  <Label htmlFor="female" className="font-normal">Female</Label>
-                </div>
-              </RadioGroup>
-            </div>
-            <div className="space-y-2">
-              <Label>Ethnicity</Label>
-              <Select
-                value={formData.ethnicity}
-                onValueChange={(value) => updateField("ethnicity", value)}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {ETHNICITY_OPTIONS.map((eth) => (
-                    <SelectItem key={eth} value={eth}>{eth}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Pronouns</Label>
-              <Select
-                value={formData.pronouns}
-                onValueChange={(value) => updateField("pronouns", value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {PRONOUNS_OPTIONS.map((p) => (
-                    <SelectItem key={p} value={p}>{p}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+              <TabsContent value="contact" className="mt-0">
+                <ContactInfoTab
+                  formData={formData}
+                  updateField={updateField}
+                />
+              </TabsContent>
 
-          {/* Row 4: Height, Weight, BMI */}
-          <div className="grid grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="height_inches">Height</Label>
-              <Input
-                id="height_inches"
-                type="number"
-                value={formData.height_inches}
-                onChange={(e) => updateField("height_inches", e.target.value)}
-                placeholder=""
-              />
-              <p className="text-xs text-muted-foreground">In inches</p>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="weight_pounds">Weight</Label>
-              <Input
-                id="weight_pounds"
-                type="number"
-                value={formData.weight_pounds}
-                onChange={(e) => updateField("weight_pounds", e.target.value)}
-                placeholder=""
-              />
-              <p className="text-xs text-muted-foreground">In pounds</p>
-            </div>
-            <div className="space-y-2">
-              <Label>BMI</Label>
-              <div className="text-2xl font-semibold pt-2">{bmi}</div>
-            </div>
-          </div>
+              <TabsContent value="physical" className="mt-0">
+                <PhysicalMedicalTab
+                  formData={formData}
+                  updateField={updateField}
+                  bmi={bmi}
+                />
+              </TabsContent>
 
-          {/* Row 5: Phone numbers */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="cell_phone">Cell Phone</Label>
-              <Input
-                id="cell_phone"
-                type="tel"
-                value={formData.cell_phone}
-                onChange={(e) => updateField("cell_phone", e.target.value)}
-              />
-              <p className="text-xs text-muted-foreground">Hint: Your active phone number.</p>
+              <TabsContent value="eligibility" className="mt-0">
+                <EligibilityTab
+                  formData={formData}
+                  updateField={updateField}
+                />
+              </TabsContent>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="home_phone">Home Phone</Label>
-              <Input
-                id="home_phone"
-                type="tel"
-                value={formData.home_phone}
-                onChange={(e) => updateField("home_phone", e.target.value)}
-              />
-              <p className="text-xs text-muted-foreground">Hint: Your home phone number.</p>
-            </div>
-          </div>
+          </Tabs>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="work_phone">Work Phone</Label>
-              <Input
-                id="work_phone"
-                type="tel"
-                value={formData.work_phone}
-                onChange={(e) => updateField("work_phone", e.target.value)}
-              />
-              <p className="text-xs text-muted-foreground">Hint: Your work phone number.</p>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                value={formData.email}
-                onChange={(e) => updateField("email", e.target.value)}
-              />
-            </div>
-          </div>
-
-          {/* Row 6: Address */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="address_line_1">Address Line 1</Label>
-              <Input
-                id="address_line_1"
-                value={formData.address_line_1}
-                onChange={(e) => updateField("address_line_1", e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="address_line_2">Address Line 2</Label>
-              <Input
-                id="address_line_2"
-                value={formData.address_line_2}
-                onChange={(e) => updateField("address_line_2", e.target.value)}
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="city">City</Label>
-              <Input
-                id="city"
-                value={formData.city}
-                onChange={(e) => updateField("city", e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="state">State</Label>
-              <Input
-                id="state"
-                value={formData.state}
-                onChange={(e) => updateField("state", e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="postal_code">Postal Code</Label>
-              <Input
-                id="postal_code"
-                value={formData.postal_code}
-                onChange={(e) => updateField("postal_code", e.target.value)}
-              />
-            </div>
-          </div>
-
-          {/* Row 7: Alcohol Use, Tobacco Use, CMV, Social Security */}
-          <div className="grid grid-cols-4 gap-4">
-            <div className="space-y-2">
-              <Label>Alcohol Use</Label>
-              <RadioGroup
-                value={formData.alcohol_use}
-                onValueChange={(value) => updateField("alcohol_use", value)}
-                className="flex gap-4 pt-2"
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="yes" id="alcohol_yes" />
-                  <Label htmlFor="alcohol_yes" className="font-normal">Yes</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="no" id="alcohol_no" />
-                  <Label htmlFor="alcohol_no" className="font-normal">No</Label>
-                </div>
-              </RadioGroup>
-            </div>
-            <div className="space-y-2">
-              <Label>Tobacco Use</Label>
-              <RadioGroup
-                value={formData.tobacco_use}
-                onValueChange={(value) => updateField("tobacco_use", value)}
-                className="flex gap-4 pt-2"
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="yes" id="tobacco_yes" />
-                  <Label htmlFor="tobacco_yes" className="font-normal">Yes</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="no" id="tobacco_no" />
-                  <Label htmlFor="tobacco_no" className="font-normal">No</Label>
-                </div>
-              </RadioGroup>
-            </div>
-            <div className="space-y-2">
-              <Label>Is CMV Positive</Label>
-              <Select
-                value={formData.cmv_positive}
-                onValueChange={(value) => updateField("cmv_positive", value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="unknown">Unknown</SelectItem>
-                  <SelectItem value="positive">Positive</SelectItem>
-                  <SelectItem value="negative">Negative</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="social_security">Social Security</Label>
-              <Input
-                id="social_security"
-                value={formData.social_security}
-                onChange={(e) => updateField("social_security", e.target.value)}
-                placeholder="XXX-XX-XXXX"
-              />
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
+          <DialogFooter className="pt-4 border-t mt-4">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={saving}>
-              {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            <Button type="submit" disabled={saving || !canSubmit}>
+              {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Add Donor
             </Button>
           </DialogFooter>
