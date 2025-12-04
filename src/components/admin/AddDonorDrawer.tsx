@@ -157,6 +157,7 @@ const AddDonorDrawer = ({ open, onOpenChange, onSuccess }: AddDonorDrawerProps) 
 
   const validateField = (field: string, value: string) => {
     let error = "";
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (field === "first_name" && !value.trim()) {
       error = "First name is required";
     } else if (field === "last_name" && !value.trim()) {
@@ -165,6 +166,8 @@ const AddDonorDrawer = ({ open, onOpenChange, onSuccess }: AddDonorDrawerProps) 
       error = "Date of birth is required";
     } else if (field === "assigned_sex" && !value) {
       error = "Assigned sex is required";
+    } else if (field === "email" && value && !emailRegex.test(value)) {
+      error = "Please enter a valid email address";
     }
     setErrors((prev) => ({ ...prev, [field]: error }));
     return !error;
@@ -457,8 +460,13 @@ const AddDonorDrawer = ({ open, onOpenChange, onSuccess }: AddDonorDrawerProps) 
                     type="email"
                     value={formData.email}
                     onChange={(e) => updateField("email", e.target.value)}
+                    onBlur={() => handleBlur("email")}
                     placeholder="john@example.com"
+                    className={touched.email && errors.email ? "border-destructive" : ""}
                   />
+                  {touched.email && errors.email && (
+                    <p className="text-xs text-destructive">{errors.email}</p>
+                  )}
                 </div>
               </div>
 
