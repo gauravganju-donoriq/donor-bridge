@@ -26,6 +26,7 @@ interface DonationResultsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   appointmentId: string;
+  donorId: string;
   donorName?: string;
   onSuccess?: () => void;
 }
@@ -48,6 +49,7 @@ const DonationResultsDialog = ({
   open,
   onOpenChange,
   appointmentId,
+  donorId,
   donorName,
   onSuccess,
 }: DonationResultsDialogProps) => {
@@ -122,9 +124,21 @@ const DonationResultsDialog = ({
 
       if (appointmentError) throw appointmentError;
 
+      // Auto-create follow-up task for mandatory post-donation call
+      const { error: followUpError } = await supabase.from("follow_ups").insert({
+        appointment_id: appointmentId,
+        donor_id: donorId,
+        status: "pending",
+      });
+
+      if (followUpError) {
+        console.error("Error creating follow-up:", followUpError);
+        // Don't fail the whole operation if follow-up creation fails
+      }
+
       toast({
         title: "Results recorded",
-        description: "Donation results saved and appointment marked as completed.",
+        description: "Donation results saved. A follow-up task has been created.",
       });
 
       onOpenChange(false);

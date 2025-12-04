@@ -354,6 +354,7 @@ const DonorAppointments = ({ donorId, donorName }: DonorAppointmentsProps) => {
             if (!open) setSelectedAppointmentId(null);
           }}
           appointmentId={selectedAppointmentId}
+          donorId={donorId}
           donorName={donorName}
           onSuccess={fetchAppointments}
         />
