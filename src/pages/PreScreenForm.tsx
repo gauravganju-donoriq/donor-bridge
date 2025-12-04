@@ -10,6 +10,7 @@ import StepOne from "@/components/pre-screen/StepOne";
 import StepTwo from "@/components/pre-screen/StepTwo";
 import StepThree from "@/components/pre-screen/StepThree";
 import StepFour from "@/components/pre-screen/StepFour";
+import StepFive from "@/components/pre-screen/StepFive";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 
 const formSchema = z.object({
@@ -119,9 +120,10 @@ const PreScreenForm = () => {
   };
 
   const handleNext = async () => {
-    const isValid = await validateStep(currentStep);
+    if (currentStep === 5) return;
+    const isValid = currentStep <= 4 ? await validateStep(currentStep) : true;
     if (isValid) {
-      setCurrentStep(prev => Math.min(prev + 1, 4));
+      setCurrentStep(prev => Math.min(prev + 1, 5));
     }
   };
 
@@ -134,7 +136,7 @@ const PreScreenForm = () => {
     navigate("/confirmation");
   };
 
-  const stepTitles = ["Contact Information", "Contact Preferences", "Basic Health Info", "Health Screening"];
+  const stepTitles = ["Contact Information", "Contact Preferences", "Basic Health Info", "Health Screening", "Review & Submit"];
 
   return (
     <div className="min-h-screen bg-background py-8 px-4">
@@ -151,7 +153,7 @@ const PreScreenForm = () => {
         <Card>
           <CardHeader>
             <CardTitle className="text-2xl">{stepTitles[currentStep - 1]}</CardTitle>
-            <FormProgress currentStep={currentStep} totalSteps={4} />
+            <FormProgress currentStep={currentStep} totalSteps={5} />
           </CardHeader>
           <CardContent>
             <FormProvider {...methods}>
@@ -160,6 +162,7 @@ const PreScreenForm = () => {
                 {currentStep === 2 && <StepTwo />}
                 {currentStep === 3 && <StepThree />}
                 {currentStep === 4 && <StepFour />}
+                {currentStep === 5 && <StepFive />}
                 
                 <div className="flex justify-between mt-8">
                   <Button
@@ -172,7 +175,7 @@ const PreScreenForm = () => {
                     Back
                   </Button>
                   
-                  {currentStep < 4 ? (
+                  {currentStep < 5 ? (
                     <Button type="button" onClick={handleNext}>
                       Next
                       <ArrowRight className="w-4 h-4 ml-2" />
