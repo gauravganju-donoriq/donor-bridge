@@ -22,12 +22,30 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
+export interface ExistingResult {
+  id: string;
+  volume_ml: number | null;
+  clots_vol_ml: number | null;
+  final_vol_ml: number | null;
+  cell_count: number | null;
+  lot_number: string | null;
+  lot_number_2: string | null;
+  lot_number_3: string | null;
+  lot_number_4: string | null;
+  doctor_id: string | null;
+  doctor_comments: string | null;
+  lab_tech_id: string | null;
+  exam_room_time: string | null;
+  departure_time: string | null;
+}
+
 interface DonationResultsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   appointmentId: string;
   donorId: string;
   donorName?: string;
+  existingResult?: ExistingResult;
   onSuccess?: () => void;
 }
 
@@ -58,6 +76,7 @@ const DonationResultsDialog = ({
   appointmentId,
   donorId,
   donorName,
+  existingResult,
   onSuccess,
 }: DonationResultsDialogProps) => {
   const { toast } = useToast();
@@ -79,12 +98,32 @@ const DonationResultsDialog = ({
     departure_time: "",
   });
 
+  const isEditMode = !!existingResult;
+
   useEffect(() => {
     if (open) {
       fetchStaffMembers();
-      resetForm();
+      if (existingResult) {
+        setFormData({
+          volume_ml: existingResult.volume_ml?.toString() || "",
+          clots_vol_ml: existingResult.clots_vol_ml?.toString() || "",
+          final_vol_ml: existingResult.final_vol_ml?.toString() || "",
+          cell_count: existingResult.cell_count?.toString() || "",
+          lot_number: existingResult.lot_number || "",
+          lot_number_2: existingResult.lot_number_2 || "",
+          lot_number_3: existingResult.lot_number_3 || "",
+          lot_number_4: existingResult.lot_number_4 || "",
+          doctor_id: existingResult.doctor_id || "",
+          doctor_comments: existingResult.doctor_comments || "",
+          lab_tech_id: existingResult.lab_tech_id || "",
+          exam_room_time: existingResult.exam_room_time || "",
+          departure_time: existingResult.departure_time || "",
+        });
+      } else {
+        resetForm();
+      }
     }
-  }, [open]);
+  }, [open, existingResult]);
 
   // Auto-calculate final volume
   useEffect(() => {
@@ -132,9 +171,7 @@ const DonationResultsDialog = ({
 
     setSaving(true);
     try {
-      // Insert donation results
-      const { error: resultsError } = await supabase.from("donation_results").insert({
-        appointment_id: appointmentId,
+      const resultData = {
         volume_ml: parseFloat(formData.volume_ml) || null,
         clots_vol_ml: formData.clots_vol_ml ? parseFloat(formData.clots_vol_ml) : null,
         final_vol_ml: formData.final_vol_ml ? parseFloat(formData.final_vol_ml) : null,
@@ -148,33 +185,54 @@ const DonationResultsDialog = ({
         lab_tech_id: formData.lab_tech_id || null,
         exam_room_time: formData.exam_room_time || null,
         departure_time: formData.departure_time || null,
-      });
+      };
 
-      if (resultsError) throw resultsError;
+      if (isEditMode && existingResult) {
+        // Update existing result
+        const { error } = await supabase
+          .from("donation_results")
+          .update(resultData)
+          .eq("id", existingResult.id);
 
-      // Update appointment status to completed
-      const { error: appointmentError } = await supabase
-        .from("appointments")
-        .update({ status: "completed" })
-        .eq("id", appointmentId);
+        if (error) throw error;
 
-      if (appointmentError) throw appointmentError;
+        toast({
+          title: "Results updated",
+          description: "Donation results have been updated.",
+        });
+      } else {
+        // Insert new result
+        const { error: resultsError } = await supabase.from("donation_results").insert({
+          appointment_id: appointmentId,
+          ...resultData,
+        });
 
-      // Auto-create follow-up task for mandatory post-donation call
-      const { error: followUpError } = await supabase.from("follow_ups").insert({
-        appointment_id: appointmentId,
-        donor_id: donorId,
-        status: "pending",
-      });
+        if (resultsError) throw resultsError;
 
-      if (followUpError) {
-        console.error("Error creating follow-up:", followUpError);
+        // Update appointment status to completed
+        const { error: appointmentError } = await supabase
+          .from("appointments")
+          .update({ status: "completed" })
+          .eq("id", appointmentId);
+
+        if (appointmentError) throw appointmentError;
+
+        // Auto-create follow-up task for mandatory post-donation call
+        const { error: followUpError } = await supabase.from("follow_ups").insert({
+          appointment_id: appointmentId,
+          donor_id: donorId,
+          status: "pending",
+        });
+
+        if (followUpError) {
+          console.error("Error creating follow-up:", followUpError);
+        }
+
+        toast({
+          title: "Results recorded",
+          description: "Donation results saved. A follow-up task has been created.",
+        });
       }
-
-      toast({
-        title: "Results recorded",
-        description: "Donation results saved. A follow-up task has been created.",
-      });
 
       onOpenChange(false);
       onSuccess?.();
@@ -196,12 +254,12 @@ const DonationResultsDialog = ({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FlaskConical className="h-5 w-5" />
-            Record Donation Results
+            {isEditMode ? "Edit Donation Results" : "Record Donation Results"}
           </DialogTitle>
           <DialogDescription>
             {donorName
-              ? `Enter the donation results for ${donorName}.`
-              : "Enter the results from this donation procedure."}
+              ? `${isEditMode ? "Update" : "Enter"} the donation results for ${donorName}.`
+              : `${isEditMode ? "Update" : "Enter"} the results from this donation procedure.`}
           </DialogDescription>
         </DialogHeader>
 
@@ -388,7 +446,7 @@ const DonationResultsDialog = ({
             Cancel
           </Button>
           <Button onClick={handleSubmit} disabled={saving}>
-            {saving ? "Saving..." : "Save Results & Complete"}
+            {saving ? "Saving..." : isEditMode ? "Update Results" : "Save Results & Complete"}
           </Button>
         </DialogFooter>
       </DialogContent>

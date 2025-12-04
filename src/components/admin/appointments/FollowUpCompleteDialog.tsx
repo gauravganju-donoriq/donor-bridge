@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Phone, Mail, Printer } from "lucide-react";
 import {
   Dialog,
@@ -18,23 +18,42 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 
+export interface ExistingFollowUp {
+  id: string;
+  status: string;
+  pain_level: number | null;
+  current_pain_level: number | null;
+  staff_rating: number | null;
+  nurse_rating: number | null;
+  doctor_rating: number | null;
+  took_pain_medication: boolean | null;
+  pain_medication_details: string | null;
+  checked_aspiration_sites: boolean | null;
+  aspiration_sites_notes: string | null;
+  signs_of_infection: boolean | null;
+  infection_details: string | null;
+  unusual_symptoms: boolean | null;
+  symptoms_details: string | null;
+  would_donate_again: boolean | null;
+  procedure_feedback: string | null;
+  notes: string | null;
+}
+
 interface FollowUpCompleteDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   followUpId: string;
   donorName?: string;
+  existingFollowUp?: ExistingFollowUp;
   onSuccess?: () => void;
 }
 
 interface FormData {
-  // Pain Assessment
   pain_level: number;
   current_pain_level: number;
-  // Staff Ratings
   staff_rating: number;
   nurse_rating: number;
   doctor_rating: number;
-  // Recovery Questions
   took_pain_medication: boolean | null;
   pain_medication_details: string;
   checked_aspiration_sites: boolean | null;
@@ -43,9 +62,7 @@ interface FormData {
   infection_details: string;
   unusual_symptoms: boolean | null;
   symptoms_details: string;
-  // Donation Intent
   would_donate_again: string;
-  // General
   procedure_feedback: string;
   notes: string;
 }
@@ -57,6 +74,7 @@ const FollowUpCompleteDialog = ({
   onOpenChange,
   followUpId,
   donorName,
+  existingFollowUp,
   onSuccess,
 }: FollowUpCompleteDialogProps) => {
   const { toast } = useToast();
@@ -80,6 +98,34 @@ const FollowUpCompleteDialog = ({
     procedure_feedback: "",
     notes: "",
   });
+
+  const isEditMode = !!existingFollowUp && existingFollowUp.status === "completed";
+  const isCompleted = existingFollowUp?.status === "completed";
+
+  useEffect(() => {
+    if (open && existingFollowUp) {
+      setFormData({
+        pain_level: existingFollowUp.pain_level || 0,
+        current_pain_level: existingFollowUp.current_pain_level || 0,
+        staff_rating: existingFollowUp.staff_rating || 0,
+        nurse_rating: existingFollowUp.nurse_rating || 0,
+        doctor_rating: existingFollowUp.doctor_rating || 0,
+        took_pain_medication: existingFollowUp.took_pain_medication,
+        pain_medication_details: existingFollowUp.pain_medication_details || "",
+        checked_aspiration_sites: existingFollowUp.checked_aspiration_sites,
+        aspiration_sites_notes: existingFollowUp.aspiration_sites_notes || "",
+        signs_of_infection: existingFollowUp.signs_of_infection,
+        infection_details: existingFollowUp.infection_details || "",
+        unusual_symptoms: existingFollowUp.unusual_symptoms,
+        symptoms_details: existingFollowUp.symptoms_details || "",
+        would_donate_again: existingFollowUp.would_donate_again === true ? "yes" : existingFollowUp.would_donate_again === false ? "no" : "",
+        procedure_feedback: existingFollowUp.procedure_feedback || "",
+        notes: existingFollowUp.notes || "",
+      });
+    } else if (open) {
+      resetForm();
+    }
+  }, [open, existingFollowUp]);
 
   const resetForm = () => {
     setFormData({
@@ -105,46 +151,52 @@ const FollowUpCompleteDialog = ({
   const handleSubmit = async () => {
     setSaving(true);
     try {
+      const updateData: Record<string, unknown> = {
+        pain_level: formData.pain_level || null,
+        current_pain_level: formData.current_pain_level || null,
+        staff_rating: formData.staff_rating || null,
+        nurse_rating: formData.nurse_rating || null,
+        doctor_rating: formData.doctor_rating || null,
+        took_pain_medication: formData.took_pain_medication,
+        pain_medication_details: formData.pain_medication_details || null,
+        checked_aspiration_sites: formData.checked_aspiration_sites,
+        aspiration_sites_notes: formData.aspiration_sites_notes || null,
+        signs_of_infection: formData.signs_of_infection,
+        infection_details: formData.infection_details || null,
+        unusual_symptoms: formData.unusual_symptoms,
+        symptoms_details: formData.symptoms_details || null,
+        would_donate_again: formData.would_donate_again === "yes" ? true : formData.would_donate_again === "no" ? false : null,
+        procedure_feedback: formData.procedure_feedback || null,
+        notes: formData.notes || null,
+      };
+
+      // Only set completion fields if not already completed
+      if (!isCompleted) {
+        updateData.status = "completed";
+        updateData.completed_by = user?.id;
+        updateData.completed_at = new Date().toISOString();
+      }
+
       const { error } = await supabase
         .from("follow_ups")
-        .update({
-          status: "completed",
-          pain_level: formData.pain_level || null,
-          current_pain_level: formData.current_pain_level || null,
-          staff_rating: formData.staff_rating || null,
-          nurse_rating: formData.nurse_rating || null,
-          doctor_rating: formData.doctor_rating || null,
-          took_pain_medication: formData.took_pain_medication,
-          pain_medication_details: formData.pain_medication_details || null,
-          checked_aspiration_sites: formData.checked_aspiration_sites,
-          aspiration_sites_notes: formData.aspiration_sites_notes || null,
-          signs_of_infection: formData.signs_of_infection,
-          infection_details: formData.infection_details || null,
-          unusual_symptoms: formData.unusual_symptoms,
-          symptoms_details: formData.symptoms_details || null,
-          would_donate_again: formData.would_donate_again === "yes" ? true : formData.would_donate_again === "no" ? false : null,
-          procedure_feedback: formData.procedure_feedback || null,
-          notes: formData.notes || null,
-          completed_by: user?.id,
-          completed_at: new Date().toISOString(),
-        })
+        .update(updateData)
         .eq("id", followUpId);
 
       if (error) throw error;
 
       toast({
-        title: "Follow-up completed",
-        description: "The follow-up has been recorded.",
+        title: isEditMode ? "Follow-up updated" : "Follow-up completed",
+        description: isEditMode ? "The follow-up has been updated." : "The follow-up has been recorded.",
       });
 
       resetForm();
       onOpenChange(false);
       onSuccess?.();
     } catch (error) {
-      console.error("Error completing follow-up:", error);
+      console.error("Error saving follow-up:", error);
       toast({
         title: "Error",
-        description: "Failed to complete follow-up.",
+        description: "Failed to save follow-up.",
         variant: "destructive",
       });
     } finally {
@@ -290,36 +342,39 @@ const FollowUpCompleteDialog = ({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Phone className="h-5 w-5" />
-            Donor Follow-Up Questionnaire
+            {isEditMode ? "Edit Follow-Up Questionnaire" : "Donor Follow-Up Questionnaire"}
           </DialogTitle>
           <DialogDescription>
             {donorName
-              ? `Record the follow-up call results for ${donorName}.`
-              : "Record the results of the post-donation follow-up call."}
+              ? `${isEditMode ? "Update" : "Record"} the follow-up call results for ${donorName}.`
+              : `${isEditMode ? "Update" : "Record"} the results of the post-donation follow-up call.`}
           </DialogDescription>
         </DialogHeader>
 
-        {/* Quick Actions */}
-        <div className="flex gap-2 p-3 bg-muted/50 rounded-lg">
-          <Button variant="outline" size="sm" onClick={() => handleAttempt(1)}>
-            <Phone className="h-4 w-4 mr-1" />
-            Log Attempt 1
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => handleAttempt(2)}>
-            <Phone className="h-4 w-4 mr-1" />
-            Log Attempt 2
-          </Button>
-          <Button variant="outline" size="sm" onClick={handleSendEmail}>
-            <Mail className="h-4 w-4 mr-1" />
-            Send Email
-          </Button>
-          <Button variant="outline" size="sm" onClick={handlePrint} className="ml-auto">
-            <Printer className="h-4 w-4 mr-1" />
-            Print PDF
-          </Button>
-        </div>
-
-        <Separator />
+        {/* Quick Actions - hide if already completed */}
+        {!isCompleted && (
+          <>
+            <div className="flex gap-2 p-3 bg-muted/50 rounded-lg">
+              <Button variant="outline" size="sm" onClick={() => handleAttempt(1)}>
+                <Phone className="h-4 w-4 mr-1" />
+                Log Attempt 1
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => handleAttempt(2)}>
+                <Phone className="h-4 w-4 mr-1" />
+                Log Attempt 2
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleSendEmail}>
+                <Mail className="h-4 w-4 mr-1" />
+                Send Email
+              </Button>
+              <Button variant="outline" size="sm" onClick={handlePrint} className="ml-auto">
+                <Printer className="h-4 w-4 mr-1" />
+                Print PDF
+              </Button>
+            </div>
+            <Separator />
+          </>
+        )}
 
         <div className="space-y-6 py-4">
           {/* Pain Assessment Section */}
@@ -463,7 +518,7 @@ const FollowUpCompleteDialog = ({
             Cancel
           </Button>
           <Button onClick={handleSubmit} disabled={saving}>
-            {saving ? "Saving..." : "Complete Follow-Up"}
+            {saving ? "Saving..." : isEditMode ? "Update Follow-Up" : "Complete Follow-Up"}
           </Button>
         </DialogFooter>
       </DialogContent>
