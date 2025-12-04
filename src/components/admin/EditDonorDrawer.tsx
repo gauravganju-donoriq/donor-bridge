@@ -9,6 +9,16 @@ import {
   SheetTitle,
   SheetDescription,
 } from "@/components/ui/sheet";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -79,6 +89,8 @@ const Section = ({
 const EditDonorDrawer = ({ open, onOpenChange, onSuccess, donor }: EditDonorDrawerProps) => {
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
+  const [isDirty, setIsDirty] = useState(false);
+  const [showConfirmClose, setShowConfirmClose] = useState(false);
 
   const [formData, setFormData] = useState({
     first_name: "",
@@ -138,6 +150,7 @@ const EditDonorDrawer = ({ open, onOpenChange, onSuccess, donor }: EditDonorDraw
         cmv_positive: donor.cmv_positive || "",
         social_security: donor.social_security_encrypted || "",
       });
+      setIsDirty(false);
     }
   }, [donor]);
 
@@ -164,6 +177,16 @@ const EditDonorDrawer = ({ open, onOpenChange, onSuccess, donor }: EditDonorDraw
 
   const updateField = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+    setIsDirty(true);
+  };
+
+  const handleClose = (forceClose = false) => {
+    if (isDirty && !forceClose) {
+      setShowConfirmClose(true);
+    } else {
+      setIsDirty(false);
+      onOpenChange(false);
+    }
   };
 
   const canSubmit = formData.first_name && formData.last_name && formData.birth_date && formData.assigned_sex;
@@ -249,7 +272,8 @@ const EditDonorDrawer = ({ open, onOpenChange, onSuccess, donor }: EditDonorDraw
   if (!donor) return null;
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
+    <>
+    <Sheet open={open} onOpenChange={(isOpen) => !isOpen ? handleClose() : onOpenChange(true)}>
       <SheetContent className="w-full sm:max-w-xl overflow-hidden flex flex-col p-0">
         <SheetHeader className="px-6 pt-6 pb-4 border-b">
           <SheetTitle className="text-xl">Edit Donor</SheetTitle>
@@ -596,7 +620,7 @@ const EditDonorDrawer = ({ open, onOpenChange, onSuccess, donor }: EditDonorDraw
           </div>
 
           <SheetFooter className="px-6 py-4 border-t bg-muted/30 flex-row gap-2 sm:gap-2">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="flex-1 sm:flex-none">
+            <Button type="button" variant="outline" onClick={() => handleClose()} className="flex-1 sm:flex-none">
               Cancel
             </Button>
             <Button type="submit" disabled={saving || !canSubmit} className="flex-1 sm:flex-none">
@@ -607,6 +631,24 @@ const EditDonorDrawer = ({ open, onOpenChange, onSuccess, donor }: EditDonorDraw
         </form>
       </SheetContent>
     </Sheet>
+
+    <AlertDialog open={showConfirmClose} onOpenChange={setShowConfirmClose}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Discard changes?</AlertDialogTitle>
+          <AlertDialogDescription>
+            You have unsaved changes. Are you sure you want to close without saving?
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Keep Editing</AlertDialogCancel>
+          <AlertDialogAction onClick={() => handleClose(true)}>
+            Discard
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 };
 
