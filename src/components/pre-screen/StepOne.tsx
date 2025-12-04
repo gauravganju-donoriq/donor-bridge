@@ -21,11 +21,11 @@ const StepOne = () => {
         <FormField
           control={control}
           name="firstName"
-          render={({ field }) => (
+          render={({ field, fieldState }) => (
             <FormItem>
               <FormLabel>First Name *</FormLabel>
               <FormControl>
-                <Input placeholder="John" {...field} />
+                <Input placeholder="John" error={!!fieldState.error} {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -34,11 +34,11 @@ const StepOne = () => {
         <FormField
           control={control}
           name="lastName"
-          render={({ field }) => (
+          render={({ field, fieldState }) => (
             <FormItem>
               <FormLabel>Last Name *</FormLabel>
               <FormControl>
-                <Input placeholder="Doe" {...field} />
+                <Input placeholder="Doe" error={!!fieldState.error} {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -49,11 +49,11 @@ const StepOne = () => {
       <FormField
         control={control}
         name="phone"
-        render={({ field }) => (
+        render={({ field, fieldState }) => (
           <FormItem>
             <FormLabel>Phone *</FormLabel>
             <FormControl>
-              <Input type="tel" placeholder="(555) 123-4567" {...field} />
+              <Input type="tel" placeholder="(555) 123-4567" error={!!fieldState.error} {...field} />
             </FormControl>
             <FormMessage />
           </FormItem>
@@ -63,11 +63,11 @@ const StepOne = () => {
       <FormField
         control={control}
         name="email"
-        render={({ field }) => (
+        render={({ field, fieldState }) => (
           <FormItem>
             <FormLabel>Email *</FormLabel>
             <FormControl>
-              <Input type="email" placeholder="john@example.com" {...field} />
+              <Input type="email" placeholder="john@example.com" error={!!fieldState.error} {...field} />
             </FormControl>
             <FormMessage />
           </FormItem>
@@ -77,11 +77,11 @@ const StepOne = () => {
       <FormField
         control={control}
         name="streetAddress"
-        render={({ field }) => (
+        render={({ field, fieldState }) => (
           <FormItem>
             <FormLabel>Street Address *</FormLabel>
             <FormControl>
-              <Input placeholder="123 Main St" {...field} />
+              <Input placeholder="123 Main St" error={!!fieldState.error} {...field} />
             </FormControl>
             <FormMessage />
           </FormItem>
@@ -106,11 +106,11 @@ const StepOne = () => {
         <FormField
           control={control}
           name="city"
-          render={({ field }) => (
+          render={({ field, fieldState }) => (
             <FormItem>
               <FormLabel>City *</FormLabel>
               <FormControl>
-                <Input placeholder="City" {...field} />
+                <Input placeholder="City" error={!!fieldState.error} {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -119,12 +119,12 @@ const StepOne = () => {
         <FormField
           control={control}
           name="state"
-          render={({ field }) => (
+          render={({ field, fieldState }) => (
             <FormItem>
               <FormLabel>State *</FormLabel>
               <Select onValueChange={field.onChange} defaultValue={field.value}>
                 <FormControl>
-                  <SelectTrigger>
+                  <SelectTrigger className={fieldState.error ? "border-destructive" : ""}>
                     <SelectValue placeholder="State" />
                   </SelectTrigger>
                 </FormControl>
@@ -141,11 +141,11 @@ const StepOne = () => {
         <FormField
           control={control}
           name="zipCode"
-          render={({ field }) => (
+          render={({ field, fieldState }) => (
             <FormItem>
               <FormLabel>ZIP Code *</FormLabel>
               <FormControl>
-                <Input placeholder="12345" {...field} />
+                <Input placeholder="12345" error={!!fieldState.error} {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
