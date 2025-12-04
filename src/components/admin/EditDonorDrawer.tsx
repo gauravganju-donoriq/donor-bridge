@@ -180,6 +180,39 @@ const EditDonorDrawer = ({ open, onOpenChange, onSuccess, donor }: EditDonorDraw
     setIsDirty(true);
   };
 
+  const resetForm = () => {
+    if (donor) {
+      setFormData({
+        first_name: donor.first_name || "",
+        last_name: donor.last_name || "",
+        middle_initial: donor.middle_initial || "",
+        chosen_name: donor.chosen_name || "",
+        birth_date: donor.birth_date || "",
+        eligibility_status: donor.eligibility_status || "eligible",
+        ineligibility_reason: donor.ineligibility_reason || "N/A",
+        assigned_sex: donor.assigned_sex || "",
+        ethnicity: donor.ethnicity || "No Answer",
+        pronouns: donor.pronouns || "",
+        height_inches: donor.height_inches?.toString() || "",
+        weight_pounds: donor.weight_pounds?.toString() || "",
+        cell_phone: donor.cell_phone || "",
+        home_phone: donor.home_phone || "",
+        work_phone: donor.work_phone || "",
+        email: donor.email || "",
+        address_line_1: donor.address_line_1 || "",
+        address_line_2: donor.address_line_2 || "",
+        city: donor.city || "",
+        state: donor.state || "",
+        postal_code: donor.postal_code || "",
+        alcohol_use: donor.alcohol_use === true ? "yes" : donor.alcohol_use === false ? "no" : "",
+        tobacco_use: donor.tobacco_use === true ? "yes" : donor.tobacco_use === false ? "no" : "",
+        cmv_positive: donor.cmv_positive || "",
+        social_security: donor.social_security_encrypted || "",
+      });
+      setIsDirty(false);
+    }
+  };
+
   const handleClose = (forceClose = false) => {
     if (isDirty && !forceClose) {
       setShowConfirmClose(true);
@@ -622,6 +655,9 @@ const EditDonorDrawer = ({ open, onOpenChange, onSuccess, donor }: EditDonorDraw
           <SheetFooter className="px-6 py-4 border-t bg-muted/30 flex-row gap-2 sm:gap-2">
             <Button type="button" variant="outline" onClick={() => handleClose()} className="flex-1 sm:flex-none">
               Cancel
+            </Button>
+            <Button type="button" variant="ghost" onClick={resetForm} disabled={!isDirty} className="flex-1 sm:flex-none">
+              Reset Form
             </Button>
             <Button type="submit" disabled={saving || !canSubmit} className="flex-1 sm:flex-none">
               {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
