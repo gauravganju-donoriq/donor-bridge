@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
-import { FlaskConical, Calendar, User, Clock } from "lucide-react";
+import { FlaskConical, Calendar, User, Clock, Pencil } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -13,9 +14,11 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { format, parseISO } from "date-fns";
+import DonationResultsDialog, { type ExistingResult } from "@/components/admin/appointments/DonationResultsDialog";
 
 interface DonorResultsProps {
   donorId: string;
+  donorName?: string;
 }
 
 interface DonationResult {
@@ -29,7 +32,9 @@ interface DonationResult {
   lot_number_2: string | null;
   lot_number_3: string | null;
   lot_number_4: string | null;
+  doctor_id: string | null;
   doctor_comments: string | null;
+  lab_tech_id: string | null;
   exam_room_time: string | null;
   departure_time: string | null;
   created_at: string;
@@ -41,9 +46,11 @@ interface DonationResult {
   };
 }
 
-const DonorResults = ({ donorId }: DonorResultsProps) => {
+const DonorResults = ({ donorId, donorName }: DonorResultsProps) => {
   const [results, setResults] = useState<DonationResult[]>([]);
   const [loading, setLoading] = useState(true);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [selectedResult, setSelectedResult] = useState<DonationResult | null>(null);
 
   useEffect(() => {
     fetchResults();
@@ -88,6 +95,11 @@ const DonorResults = ({ donorId }: DonorResultsProps) => {
     }
   };
 
+  const handleEdit = (result: DonationResult) => {
+    setSelectedResult(result);
+    setEditDialogOpen(true);
+  };
+
   const totalVolume = results.reduce((sum, r) => sum + (r.final_vol_ml || r.volume_ml || 0), 0);
   const avgCellCount = results.length > 0
     ? results.reduce((sum, r) => sum + (r.cell_count || 0), 0) / results.filter(r => r.cell_count).length
@@ -111,157 +123,182 @@ const DonorResults = ({ donorId }: DonorResultsProps) => {
   }
 
   return (
-    <div className="space-y-4">
-      {/* Summary Cards */}
-      <div className="grid grid-cols-3 gap-4">
-        <Card>
-          <CardContent className="pt-4">
-            <div className="text-sm text-muted-foreground">Total Donations</div>
-            <div className="text-2xl font-bold">{results.length}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4">
-            <div className="text-sm text-muted-foreground">Total Volume</div>
-            <div className="text-2xl font-bold">{totalVolume.toFixed(1)} ml</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4">
-            <div className="text-sm text-muted-foreground">Avg Cell Count</div>
-            <div className="text-2xl font-bold">{avgCellCount ? avgCellCount.toFixed(2) : "—"}</div>
-          </CardContent>
-        </Card>
-      </div>
+    <>
+      <div className="space-y-4">
+        {/* Summary Cards */}
+        <div className="grid grid-cols-3 gap-4">
+          <Card>
+            <CardContent className="pt-4">
+              <div className="text-sm text-muted-foreground">Total Donations</div>
+              <div className="text-2xl font-bold">{results.length}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-4">
+              <div className="text-sm text-muted-foreground">Total Volume</div>
+              <div className="text-2xl font-bold">{totalVolume.toFixed(1)} ml</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-4">
+              <div className="text-sm text-muted-foreground">Avg Cell Count</div>
+              <div className="text-2xl font-bold">{avgCellCount ? avgCellCount.toFixed(2) : "—"}</div>
+            </CardContent>
+          </Card>
+        </div>
 
-      {/* Results Table */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base font-semibold">
-            Donation Results ({results.length})
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {results.length === 0 ? (
-            <div className="text-center py-10 text-muted-foreground border-2 border-dashed rounded-lg">
-              <FlaskConical className="h-8 w-8 mx-auto mb-2 opacity-50" />
-              <p className="text-sm font-medium">No donation results recorded</p>
-              <p className="text-sm">Results will appear here after donations are completed.</p>
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Letter</TableHead>
-                  <TableHead>Volume (ml)</TableHead>
-                  <TableHead>Cell Count</TableHead>
-                  <TableHead>Lot Numbers</TableHead>
-                  <TableHead>Staff</TableHead>
-                  <TableHead>Times</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {results.map((result) => (
-                  <TableRow key={result.id}>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm">
-                          {result.appointment?.appointment_date
-                            ? format(parseISO(result.appointment.appointment_date), "MMM d, yyyy")
-                            : format(parseISO(result.created_at), "MMM d, yyyy")}
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {result.appointment?.donor_letter ? (
-                        <Badge variant="outline">{result.appointment.donor_letter}</Badge>
-                      ) : "—"}
-                    </TableCell>
-                    <TableCell>
-                      <div className="space-y-1">
-                        <div className="font-medium">{result.final_vol_ml || result.volume_ml || "—"}</div>
-                        {result.clots_vol_ml && (
-                          <div className="text-xs text-muted-foreground">
-                            Clots: {result.clots_vol_ml}
-                          </div>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>{result.cell_count || "—"}</TableCell>
-                    <TableCell>
-                      <div className="text-sm space-y-0.5">
-                        {result.lot_number && <div>{result.lot_number}</div>}
-                        {result.lot_number_2 && <div className="text-muted-foreground">{result.lot_number_2}</div>}
-                        {result.lot_number_3 && <div className="text-muted-foreground">{result.lot_number_3}</div>}
-                        {result.lot_number_4 && <div className="text-muted-foreground">{result.lot_number_4}</div>}
-                        {!result.lot_number && "—"}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-sm space-y-0.5">
-                        {result.doctor?.full_name && (
-                          <div className="flex items-center gap-1">
-                            <User className="h-3 w-3" />
-                            {result.doctor.full_name}
-                          </div>
-                        )}
-                        {result.lab_tech?.full_name && (
-                          <div className="text-muted-foreground text-xs">
-                            Lab: {result.lab_tech.full_name}
-                          </div>
-                        )}
-                        {!result.doctor?.full_name && !result.lab_tech?.full_name && "—"}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-sm space-y-0.5">
-                        {result.exam_room_time && (
-                          <div className="flex items-center gap-1 text-xs">
-                            <Clock className="h-3 w-3" />
-                            In: {result.exam_room_time}
-                          </div>
-                        )}
-                        {result.departure_time && (
-                          <div className="text-xs text-muted-foreground">
-                            Out: {result.departure_time}
-                          </div>
-                        )}
-                        {!result.exam_room_time && !result.departure_time && "—"}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Comments Section */}
-      {results.some(r => r.doctor_comments) && (
+        {/* Results Table */}
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base font-semibold">Doctor Comments</CardTitle>
+            <CardTitle className="text-base font-semibold">
+              Donation Results ({results.length})
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              {results.filter(r => r.doctor_comments).map((result) => (
-                <div key={result.id} className="p-3 bg-muted/50 rounded-lg">
-                  <div className="text-xs text-muted-foreground mb-1">
-                    {result.appointment?.appointment_date
-                      ? format(parseISO(result.appointment.appointment_date), "MMM d, yyyy")
-                      : format(parseISO(result.created_at), "MMM d, yyyy")}
-                  </div>
-                  <p className="text-sm">{result.doctor_comments}</p>
-                </div>
-              ))}
-            </div>
+            {results.length === 0 ? (
+              <div className="text-center py-10 text-muted-foreground border-2 border-dashed rounded-lg">
+                <FlaskConical className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                <p className="text-sm font-medium">No donation results recorded</p>
+                <p className="text-sm">Results will appear here after donations are completed.</p>
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Letter</TableHead>
+                    <TableHead>Volume (ml)</TableHead>
+                    <TableHead>Cell Count</TableHead>
+                    <TableHead>Lot Numbers</TableHead>
+                    <TableHead>Staff</TableHead>
+                    <TableHead>Times</TableHead>
+                    <TableHead className="w-[60px]"></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {results.map((result) => (
+                    <TableRow key={result.id}>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-sm">
+                            {result.appointment?.appointment_date
+                              ? format(parseISO(result.appointment.appointment_date), "MMM d, yyyy")
+                              : format(parseISO(result.created_at), "MMM d, yyyy")}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {result.appointment?.donor_letter ? (
+                          <Badge variant="outline">{result.appointment.donor_letter}</Badge>
+                        ) : "—"}
+                      </TableCell>
+                      <TableCell>
+                        <div className="space-y-1">
+                          <div className="font-medium">{result.final_vol_ml || result.volume_ml || "—"}</div>
+                          {result.clots_vol_ml && (
+                            <div className="text-xs text-muted-foreground">
+                              Clots: {result.clots_vol_ml}
+                            </div>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>{result.cell_count || "—"}</TableCell>
+                      <TableCell>
+                        <div className="text-sm space-y-0.5">
+                          {result.lot_number && <div>{result.lot_number}</div>}
+                          {result.lot_number_2 && <div className="text-muted-foreground">{result.lot_number_2}</div>}
+                          {result.lot_number_3 && <div className="text-muted-foreground">{result.lot_number_3}</div>}
+                          {result.lot_number_4 && <div className="text-muted-foreground">{result.lot_number_4}</div>}
+                          {!result.lot_number && "—"}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm space-y-0.5">
+                          {result.doctor?.full_name && (
+                            <div className="flex items-center gap-1">
+                              <User className="h-3 w-3" />
+                              {result.doctor.full_name}
+                            </div>
+                          )}
+                          {result.lab_tech?.full_name && (
+                            <div className="text-muted-foreground text-xs">
+                              Lab: {result.lab_tech.full_name}
+                            </div>
+                          )}
+                          {!result.doctor?.full_name && !result.lab_tech?.full_name && "—"}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm space-y-0.5">
+                          {result.exam_room_time && (
+                            <div className="flex items-center gap-1 text-xs">
+                              <Clock className="h-3 w-3" />
+                              In: {result.exam_room_time}
+                            </div>
+                          )}
+                          {result.departure_time && (
+                            <div className="text-xs text-muted-foreground">
+                              Out: {result.departure_time}
+                            </div>
+                          )}
+                          {!result.exam_room_time && !result.departure_time && "—"}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => handleEdit(result)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
           </CardContent>
         </Card>
+
+        {/* Comments Section */}
+        {results.some(r => r.doctor_comments) && (
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base font-semibold">Doctor Comments</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {results.filter(r => r.doctor_comments).map((result) => (
+                  <div key={result.id} className="p-3 bg-muted/50 rounded-lg">
+                    <div className="text-xs text-muted-foreground mb-1">
+                      {result.appointment?.appointment_date
+                        ? format(parseISO(result.appointment.appointment_date), "MMM d, yyyy")
+                        : format(parseISO(result.created_at), "MMM d, yyyy")}
+                    </div>
+                    <p className="text-sm">{result.doctor_comments}</p>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
+      {selectedResult && (
+        <DonationResultsDialog
+          open={editDialogOpen}
+          onOpenChange={setEditDialogOpen}
+          appointmentId={selectedResult.appointment_id}
+          donorId={donorId}
+          donorName={donorName}
+          existingResult={selectedResult as ExistingResult}
+          onSuccess={fetchResults}
+        />
       )}
-    </div>
+    </>
   );
 };
 

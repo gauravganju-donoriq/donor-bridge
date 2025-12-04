@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Phone, Mail, CheckCircle, AlertCircle, Clock } from "lucide-react";
+import { Phone, Mail, CheckCircle, AlertCircle, Clock, Pencil } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -14,7 +14,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { format, parseISO } from "date-fns";
-import FollowUpCompleteDialog from "@/components/admin/appointments/FollowUpCompleteDialog";
+import FollowUpCompleteDialog, { type ExistingFollowUp } from "@/components/admin/appointments/FollowUpCompleteDialog";
 
 interface DonorFollowUpsProps {
   donorId: string;
@@ -30,6 +30,14 @@ interface FollowUp {
   staff_rating: number | null;
   nurse_rating: number | null;
   doctor_rating: number | null;
+  took_pain_medication: boolean | null;
+  pain_medication_details: string | null;
+  checked_aspiration_sites: boolean | null;
+  aspiration_sites_notes: string | null;
+  signs_of_infection: boolean | null;
+  infection_details: string | null;
+  unusual_symptoms: boolean | null;
+  symptoms_details: string | null;
   would_donate_again: boolean | null;
   procedure_feedback: string | null;
   notes: string | null;
@@ -90,6 +98,11 @@ const DonorFollowUps = ({ donorId, donorName }: DonorFollowUpsProps) => {
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
+  };
+
+  const handleOpenDialog = (followUp: FollowUp) => {
+    setSelectedFollowUp(followUp);
+    setDialogOpen(true);
   };
 
   const completedCount = followUps.filter(f => f.status === "completed").length;
@@ -170,7 +183,7 @@ const DonorFollowUps = ({ donorId, donorName }: DonorFollowUpsProps) => {
                     <TableHead>Pain Level</TableHead>
                     <TableHead>Ratings</TableHead>
                     <TableHead>Donate Again?</TableHead>
-                    <TableHead>Actions</TableHead>
+                    <TableHead className="w-[100px]">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -220,18 +233,26 @@ const DonorFollowUps = ({ donorId, donorName }: DonorFollowUpsProps) => {
                         {followUp.would_donate_again === null && "—"}
                       </TableCell>
                       <TableCell>
-                        {followUp.status !== "completed" && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => {
-                              setSelectedFollowUp(followUp);
-                              setDialogOpen(true);
-                            }}
-                          >
-                            Complete
-                          </Button>
-                        )}
+                        <div className="flex gap-1">
+                          {followUp.status === "completed" ? (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleOpenDialog(followUp)}
+                            >
+                              <Pencil className="h-4 w-4 mr-1" />
+                              Edit
+                            </Button>
+                          ) : (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleOpenDialog(followUp)}
+                            >
+                              Complete
+                            </Button>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -284,6 +305,7 @@ const DonorFollowUps = ({ donorId, donorName }: DonorFollowUpsProps) => {
           onOpenChange={setDialogOpen}
           followUpId={selectedFollowUp.id}
           donorName={donorName}
+          existingFollowUp={selectedFollowUp as ExistingFollowUp}
           onSuccess={fetchFollowUps}
         />
       )}
