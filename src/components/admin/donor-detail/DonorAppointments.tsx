@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, Calendar, Clock, MoreHorizontal, MapPin, Car } from "lucide-react";
+import { Plus, Calendar, Clock, MoreHorizontal, MapPin, Car, FlaskConical } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -18,25 +18,58 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { format, parseISO } from "date-fns";
 import AppointmentScheduleDialog from "@/components/admin/appointments/AppointmentScheduleDialog";
 import AppointmentStatusBadge from "@/components/admin/appointments/AppointmentStatusBadge";
-import type { AppointmentWithDonor, AppointmentStatus } from "@/components/admin/appointments/types";
+import DonationResultsDialog from "@/components/admin/appointments/DonationResultsDialog";
+import type { AppointmentStatus } from "@/components/admin/appointments/types";
 
 interface DonorAppointmentsProps {
   donorId: string;
   donorName?: string;
 }
 
+interface AppointmentWithResults {
+  id: string;
+  donor_id: string;
+  appointment_date: string;
+  appointment_type: string | null;
+  status: AppointmentStatus | null;
+  notes: string | null;
+  purpose: string | null;
+  location: string | null;
+  donor_letter: string | null;
+  uber_needed: boolean | null;
+  uber_ordered: boolean | null;
+  prescreener?: { full_name: string | null };
+  donation_results?: {
+    volume_ml: number | null;
+    cell_count: number | null;
+    lot_number: string | null;
+  } | {
+    volume_ml: number | null;
+    cell_count: number | null;
+    lot_number: string | null;
+  }[];
+}
+
 const DonorAppointments = ({ donorId, donorName }: DonorAppointmentsProps) => {
   const { toast } = useToast();
-  const [appointments, setAppointments] = useState<AppointmentWithDonor[]>([]);
+  const [appointments, setAppointments] = useState<AppointmentWithResults[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [lastDonorLetter, setLastDonorLetter] = useState<string | null>(null);
+  const [resultsDialogOpen, setResultsDialogOpen] = useState(false);
+  const [selectedAppointmentId, setSelectedAppointmentId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchAppointments();
@@ -50,6 +83,11 @@ const DonorAppointments = ({ donorId, donorName }: DonorAppointmentsProps) => {
           *,
           prescreener:prescreened_by (
             full_name
+          ),
+          donation_results (
+            volume_ml,
+            cell_count,
+            lot_number
           )
         `)
         .eq("donor_id", donorId)
@@ -69,6 +107,17 @@ const DonorAppointments = ({ donorId, donorName }: DonorAppointmentsProps) => {
       console.error("Error fetching appointments:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleMarkCompleted = (apt: AppointmentWithResults) => {
+    // For donations, open the results dialog
+    if (apt.appointment_type === "donation") {
+      setSelectedAppointmentId(apt.id);
+      setResultsDialogOpen(true);
+    } else {
+      // For other types, just mark as completed
+      updateStatus(apt.id, "completed");
     }
   };
 
@@ -97,6 +146,16 @@ const DonorAppointments = ({ donorId, donorName }: DonorAppointmentsProps) => {
         variant: "destructive",
       });
     }
+  };
+
+  const getResults = (apt: AppointmentWithResults) => {
+    const results = apt.donation_results;
+    if (!results) return null;
+    // Handle both array and single object
+    if (Array.isArray(results)) {
+      return results[0] || null;
+    }
+    return results;
   };
 
   if (loading) {
@@ -143,103 +202,135 @@ const DonorAppointments = ({ donorId, donorName }: DonorAppointmentsProps) => {
                   <TableHead>Type</TableHead>
                   <TableHead>Location</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Notes</TableHead>
+                  <TableHead>Results</TableHead>
                   <TableHead className="w-[50px]"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {appointments.map((apt) => (
-                  <TableRow key={apt.id}>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4 text-muted-foreground" />
-                        <div>
-                          <div className="text-sm font-medium">
-                            {format(parseISO(apt.appointment_date), "MMM d, yyyy")}
-                          </div>
-                          <div className="text-sm text-muted-foreground flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
-                            {format(parseISO(apt.appointment_date), "h:mm a")}
+                {appointments.map((apt) => {
+                  const results = getResults(apt);
+                  return (
+                    <TableRow key={apt.id}>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4 text-muted-foreground" />
+                          <div>
+                            <div className="text-sm font-medium">
+                              {format(parseISO(apt.appointment_date), "MMM d, yyyy")}
+                            </div>
+                            <div className="text-sm text-muted-foreground flex items-center gap-1">
+                              <Clock className="h-3 w-3" />
+                              {format(parseISO(apt.appointment_date), "h:mm a")}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm capitalize">
-                          {apt.appointment_type?.replace("_", " ") || "—"}
-                        </span>
-                        {apt.donor_letter && (
-                          <Badge variant="outline" className="text-xs">
-                            {apt.donor_letter}
-                          </Badge>
-                        )}
-                        {apt.purpose && (
-                          <Badge variant="secondary" className="text-xs capitalize">
-                            {apt.purpose}
-                          </Badge>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {apt.location ? (
-                        <div className="flex items-center gap-1 text-sm">
-                          <MapPin className="h-3 w-3 text-muted-foreground" />
-                          <span className="capitalize">{apt.location}</span>
-                        </div>
-                      ) : (
-                        "—"
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <AppointmentStatusBadge status={apt.status} />
-                        {(apt.uber_needed || apt.uber_ordered) && (
-                          <span title={apt.uber_ordered ? "Uber Ordered" : "Uber Needed"}>
-                            <Car
-                              className={`h-4 w-4 ${
-                                apt.uber_ordered ? "text-green-600" : "text-amber-600"
-                              }`}
-                            />
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm capitalize">
+                            {apt.appointment_type?.replace("_", " ") || "—"}
                           </span>
+                          {apt.donor_letter && (
+                            <Badge variant="outline" className="text-xs">
+                              {apt.donor_letter}
+                            </Badge>
+                          )}
+                          {apt.purpose && (
+                            <Badge variant="secondary" className="text-xs capitalize">
+                              {apt.purpose}
+                            </Badge>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {apt.location ? (
+                          <div className="flex items-center gap-1 text-sm">
+                            <MapPin className="h-3 w-3 text-muted-foreground" />
+                            <span className="capitalize">{apt.location}</span>
+                          </div>
+                        ) : (
+                          "—"
                         )}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-sm max-w-[200px] truncate">
-                      {apt.notes || "—"}
-                    </TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => updateStatus(apt.id, "completed")}>
-                            Mark Completed
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => updateStatus(apt.id, "cancelled")}>
-                            Mark Cancelled
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => updateStatus(apt.id, "no_show")}>
-                            Mark No Show
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem onClick={() => updateStatus(apt.id, "deferred")}>
-                            Mark Deferred
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => updateStatus(apt.id, "rescheduled")}>
-                            Mark Rescheduled
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => updateStatus(apt.id, "sample_not_taken")}>
-                            Sample Not Taken
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <AppointmentStatusBadge status={apt.status} />
+                          {(apt.uber_needed || apt.uber_ordered) && (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger>
+                                  <Car
+                                    className={`h-4 w-4 ${
+                                      apt.uber_ordered ? "text-green-600" : "text-amber-600"
+                                    }`}
+                                  />
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  {apt.uber_ordered ? "Uber Ordered" : "Uber Needed"}
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {apt.appointment_type === "donation" && results ? (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger>
+                                <div className="flex items-center gap-1 text-sm text-green-600">
+                                  <FlaskConical className="h-3.5 w-3.5" />
+                                  <span>{results.volume_ml} ml</span>
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <div className="text-xs space-y-1">
+                                  <div>Volume: {results.volume_ml} ml</div>
+                                  {results.cell_count && <div>Cell Count: {results.cell_count}</div>}
+                                  {results.lot_number && <div>Lot #: {results.lot_number}</div>}
+                                </div>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        ) : apt.appointment_type === "donation" && apt.status === "completed" ? (
+                          <span className="text-xs text-muted-foreground">No results</span>
+                        ) : (
+                          "—"
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleMarkCompleted(apt)}>
+                              {apt.appointment_type === "donation" ? "Complete & Enter Results" : "Mark Completed"}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => updateStatus(apt.id, "cancelled")}>
+                              Mark Cancelled
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => updateStatus(apt.id, "no_show")}>
+                              Mark No Show
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => updateStatus(apt.id, "deferred")}>
+                              Mark Deferred
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => updateStatus(apt.id, "rescheduled")}>
+                              Mark Rescheduled
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => updateStatus(apt.id, "sample_not_taken")}>
+                              Sample Not Taken
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           )}
@@ -254,6 +345,19 @@ const DonorAppointments = ({ donorId, donorName }: DonorAppointmentsProps) => {
         lastDonorLetter={lastDonorLetter}
         onSuccess={fetchAppointments}
       />
+
+      {selectedAppointmentId && (
+        <DonationResultsDialog
+          open={resultsDialogOpen}
+          onOpenChange={(open) => {
+            setResultsDialogOpen(open);
+            if (!open) setSelectedAppointmentId(null);
+          }}
+          appointmentId={selectedAppointmentId}
+          donorName={donorName}
+          onSuccess={fetchAppointments}
+        />
+      )}
     </>
   );
 };
