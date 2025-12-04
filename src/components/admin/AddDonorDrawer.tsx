@@ -89,6 +89,8 @@ const AddDonorDrawer = ({ open, onOpenChange, onSuccess }: AddDonorDrawerProps) 
   const [saving, setSaving] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
   const [showConfirmClose, setShowConfirmClose] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
 
   const [formData, setFormData] = useState({
     first_name: "",
@@ -142,6 +144,41 @@ const AddDonorDrawer = ({ open, onOpenChange, onSuccess }: AddDonorDrawerProps) 
   const updateField = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     setIsDirty(true);
+    // Clear error when user starts typing
+    if (errors[field]) {
+      setErrors((prev) => ({ ...prev, [field]: "" }));
+    }
+  };
+
+  const handleBlur = (field: string) => {
+    setTouched((prev) => ({ ...prev, [field]: true }));
+    validateField(field, formData[field as keyof typeof formData]);
+  };
+
+  const validateField = (field: string, value: string) => {
+    let error = "";
+    if (field === "first_name" && !value.trim()) {
+      error = "First name is required";
+    } else if (field === "last_name" && !value.trim()) {
+      error = "Last name is required";
+    } else if (field === "birth_date" && !value) {
+      error = "Date of birth is required";
+    } else if (field === "assigned_sex" && !value) {
+      error = "Assigned sex is required";
+    }
+    setErrors((prev) => ({ ...prev, [field]: error }));
+    return !error;
+  };
+
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {};
+    if (!formData.first_name.trim()) newErrors.first_name = "First name is required";
+    if (!formData.last_name.trim()) newErrors.last_name = "Last name is required";
+    if (!formData.birth_date) newErrors.birth_date = "Date of birth is required";
+    if (!formData.assigned_sex) newErrors.assigned_sex = "Assigned sex is required";
+    setErrors(newErrors);
+    setTouched({ first_name: true, last_name: true, birth_date: true, assigned_sex: true });
+    return Object.keys(newErrors).length === 0;
   };
 
   const resetForm = () => {
@@ -173,6 +210,8 @@ const AddDonorDrawer = ({ open, onOpenChange, onSuccess }: AddDonorDrawerProps) 
       social_security: "",
     });
     setIsDirty(false);
+    setErrors({});
+    setTouched({});
   };
 
   const handleClose = (forceClose = false) => {
@@ -189,12 +228,7 @@ const AddDonorDrawer = ({ open, onOpenChange, onSuccess }: AddDonorDrawerProps) 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!canSubmit) {
-      toast({
-        title: "Missing required fields",
-        description: "Please fill in First Name, Last Name, Date of Birth, and Assigned Sex.",
-        variant: "destructive",
-      });
+    if (!validateForm()) {
       return;
     }
 
@@ -291,9 +325,14 @@ const AddDonorDrawer = ({ open, onOpenChange, onSuccess }: AddDonorDrawerProps) 
                     id="first_name"
                     value={formData.first_name}
                     onChange={(e) => updateField("first_name", e.target.value)}
+                    onBlur={() => handleBlur("first_name")}
                     placeholder="John"
                     autoFocus
+                    className={touched.first_name && errors.first_name ? "border-destructive" : ""}
                   />
+                  {touched.first_name && errors.first_name && (
+                    <p className="text-xs text-destructive">{errors.first_name}</p>
+                  )}
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="last_name">Last Name *</Label>
@@ -301,8 +340,13 @@ const AddDonorDrawer = ({ open, onOpenChange, onSuccess }: AddDonorDrawerProps) 
                     id="last_name"
                     value={formData.last_name}
                     onChange={(e) => updateField("last_name", e.target.value)}
+                    onBlur={() => handleBlur("last_name")}
                     placeholder="Doe"
+                    className={touched.last_name && errors.last_name ? "border-destructive" : ""}
                   />
+                  {touched.last_name && errors.last_name && (
+                    <p className="text-xs text-destructive">{errors.last_name}</p>
+                  )}
                 </div>
               </div>
 
@@ -337,6 +381,8 @@ const AddDonorDrawer = ({ open, onOpenChange, onSuccess }: AddDonorDrawerProps) 
                       type="date"
                       value={formData.birth_date}
                       onChange={(e) => updateField("birth_date", e.target.value)}
+                      onBlur={() => handleBlur("birth_date")}
+                      className={touched.birth_date && errors.birth_date ? "border-destructive" : ""}
                     />
                     {age !== null && (
                       <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
@@ -344,11 +390,14 @@ const AddDonorDrawer = ({ open, onOpenChange, onSuccess }: AddDonorDrawerProps) 
                       </span>
                     )}
                   </div>
+                  {touched.birth_date && errors.birth_date && (
+                    <p className="text-xs text-destructive">{errors.birth_date}</p>
+                  )}
                 </div>
                 <div className="space-y-1.5">
                   <Label>Assigned Sex *</Label>
-                  <Select value={formData.assigned_sex} onValueChange={(v) => updateField("assigned_sex", v)}>
-                    <SelectTrigger>
+                  <Select value={formData.assigned_sex} onValueChange={(v) => { updateField("assigned_sex", v); setTouched((prev) => ({ ...prev, assigned_sex: true })); }}>
+                    <SelectTrigger className={touched.assigned_sex && errors.assigned_sex ? "border-destructive" : ""}>
                       <SelectValue placeholder="Select" />
                     </SelectTrigger>
                     <SelectContent>
@@ -356,6 +405,9 @@ const AddDonorDrawer = ({ open, onOpenChange, onSuccess }: AddDonorDrawerProps) 
                       <SelectItem value="female">Female</SelectItem>
                     </SelectContent>
                   </Select>
+                  {touched.assigned_sex && errors.assigned_sex && (
+                    <p className="text-xs text-destructive">{errors.assigned_sex}</p>
+                  )}
                 </div>
               </div>
 
