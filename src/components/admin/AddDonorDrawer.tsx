@@ -62,12 +62,12 @@ const Section = ({
   children: React.ReactNode;
   alternate?: boolean;
 }) => (
-  <div className={`${alternate ? 'bg-muted/40' : 'bg-background'}`}>
-    <div className={`sticky top-0 z-10 flex items-center gap-2 px-6 py-3 border-b border-border/50 ${alternate ? 'bg-muted/40' : 'bg-background'}`}>
+  <div className={`px-6 py-5 ${alternate ? 'bg-muted/40' : ''}`}>
+    <div className="flex items-center gap-2 pb-3 mb-4 border-b border-border/50">
       <Icon className="h-4 w-4 text-muted-foreground" />
       <h3 className="text-sm font-semibold text-foreground">{title}</h3>
     </div>
-    <div className="px-6 py-4 space-y-3">
+    <div className="space-y-3">
       {children}
     </div>
   </div>
