@@ -59,7 +59,7 @@ import { useToast } from "@/hooks/use-toast";
 import { differenceInYears } from "date-fns";
 import { useAuth } from "@/hooks/useAuth";
 import type { Tables } from "@/integrations/supabase/types";
-import AddDonorDialog from "@/components/admin/AddDonorDialog";
+import AddDonorDrawer from "@/components/admin/AddDonorDrawer";
 
 type Donor = Tables<"donors">;
 type EligibilityStatus = "eligible" | "ineligible" | "pending_review";
@@ -535,8 +535,8 @@ const Donors = () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Add Donor Dialog */}
-      <AddDonorDialog
+      {/* Add Donor Drawer */}
+      <AddDonorDrawer
         open={addDialogOpen}
         onOpenChange={setAddDialogOpen}
         onSuccess={fetchDonors}

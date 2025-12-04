@@ -2,12 +2,13 @@ import { useState, useMemo } from "react";
 import { Loader2, User, Phone, Activity, Shield, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  Sheet,
+  SheetContent,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -17,13 +18,13 @@ import { ContactInfoTab } from "./add-donor/ContactInfoTab";
 import { PhysicalMedicalTab } from "./add-donor/PhysicalMedicalTab";
 import { EligibilityTab } from "./add-donor/EligibilityTab";
 
-interface AddDonorDialogProps {
+interface AddDonorDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
 }
 
-const AddDonorDialog = ({ open, onOpenChange, onSuccess }: AddDonorDialogProps) => {
+const AddDonorDrawer = ({ open, onOpenChange, onSuccess }: AddDonorDrawerProps) => {
   const { toast } = useToast();
   const { user } = useAuth();
   const [saving, setSaving] = useState(false);
@@ -200,39 +201,42 @@ const AddDonorDialog = ({ open, onOpenChange, onSuccess }: AddDonorDialogProps) 
   );
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
-        <DialogHeader>
-          <DialogTitle>Add New Donor</DialogTitle>
-        </DialogHeader>
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent className="w-full sm:max-w-xl overflow-hidden flex flex-col">
+        <SheetHeader className="pb-4 border-b">
+          <SheetTitle className="text-xl">Add New Donor</SheetTitle>
+          <SheetDescription>
+            Enter donor information across the tabs below. Required fields are marked with *.
+          </SheetDescription>
+        </SheetHeader>
 
-        <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden pt-4">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col flex-1 overflow-hidden">
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="personal" className="flex items-center gap-1.5">
+            <TabsList className="grid w-full grid-cols-4 mb-4">
+              <TabsTrigger value="personal" className="flex items-center gap-1.5 text-xs sm:text-sm">
                 <User className="h-3.5 w-3.5" />
                 <span className="hidden sm:inline">Personal</span>
                 <TabIndicator isComplete={!!isPersonalComplete} />
               </TabsTrigger>
-              <TabsTrigger value="contact" className="flex items-center gap-1.5">
+              <TabsTrigger value="contact" className="flex items-center gap-1.5 text-xs sm:text-sm">
                 <Phone className="h-3.5 w-3.5" />
                 <span className="hidden sm:inline">Contact</span>
                 <TabIndicator isComplete={isContactComplete} />
               </TabsTrigger>
-              <TabsTrigger value="physical" className="flex items-center gap-1.5">
+              <TabsTrigger value="physical" className="flex items-center gap-1.5 text-xs sm:text-sm">
                 <Activity className="h-3.5 w-3.5" />
                 <span className="hidden sm:inline">Physical</span>
                 <TabIndicator isComplete={isPhysicalComplete} />
               </TabsTrigger>
-              <TabsTrigger value="eligibility" className="flex items-center gap-1.5">
+              <TabsTrigger value="eligibility" className="flex items-center gap-1.5 text-xs sm:text-sm">
                 <Shield className="h-3.5 w-3.5" />
                 <span className="hidden sm:inline">Eligibility</span>
                 <TabIndicator isComplete={isEligibilityComplete} />
               </TabsTrigger>
             </TabsList>
 
-            <div className="flex-1 overflow-y-auto px-1">
-              <TabsContent value="personal" className="mt-0">
+            <div className="flex-1 overflow-y-auto pr-2">
+              <TabsContent value="personal" className="mt-0 h-full">
                 <PersonalInfoTab
                   formData={formData}
                   updateField={updateField}
@@ -240,14 +244,14 @@ const AddDonorDialog = ({ open, onOpenChange, onSuccess }: AddDonorDialogProps) 
                 />
               </TabsContent>
 
-              <TabsContent value="contact" className="mt-0">
+              <TabsContent value="contact" className="mt-0 h-full">
                 <ContactInfoTab
                   formData={formData}
                   updateField={updateField}
                 />
               </TabsContent>
 
-              <TabsContent value="physical" className="mt-0">
+              <TabsContent value="physical" className="mt-0 h-full">
                 <PhysicalMedicalTab
                   formData={formData}
                   updateField={updateField}
@@ -255,7 +259,7 @@ const AddDonorDialog = ({ open, onOpenChange, onSuccess }: AddDonorDialogProps) 
                 />
               </TabsContent>
 
-              <TabsContent value="eligibility" className="mt-0">
+              <TabsContent value="eligibility" className="mt-0 h-full">
                 <EligibilityTab
                   formData={formData}
                   updateField={updateField}
@@ -264,19 +268,19 @@ const AddDonorDialog = ({ open, onOpenChange, onSuccess }: AddDonorDialogProps) 
             </div>
           </Tabs>
 
-          <DialogFooter className="pt-4 border-t mt-4">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          <SheetFooter className="pt-4 border-t mt-4 flex-row gap-2 sm:gap-0">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="flex-1 sm:flex-none">
               Cancel
             </Button>
-            <Button type="submit" disabled={saving || !canSubmit}>
+            <Button type="submit" disabled={saving || !canSubmit} className="flex-1 sm:flex-none">
               {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Add Donor
             </Button>
-          </DialogFooter>
+          </SheetFooter>
         </form>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 };
 
-export default AddDonorDialog;
+export default AddDonorDrawer;
