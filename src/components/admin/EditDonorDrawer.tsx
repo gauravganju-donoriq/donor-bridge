@@ -29,9 +29,84 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import type { Tables } from "@/integrations/supabase/types";
+
+const FormSkeleton = () => (
+  <div className="space-y-6 p-6">
+    {/* Personal Info Section */}
+    <div className="space-y-4">
+      <div className="flex items-center gap-2 pb-3 border-b border-border/50">
+        <Skeleton className="h-4 w-4" />
+        <Skeleton className="h-4 w-32" />
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1.5">
+          <Skeleton className="h-4 w-20" />
+          <Skeleton className="h-10 w-full" />
+        </div>
+        <div className="space-y-1.5">
+          <Skeleton className="h-4 w-20" />
+          <Skeleton className="h-10 w-full" />
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1.5">
+          <Skeleton className="h-4 w-24" />
+          <Skeleton className="h-10 w-full" />
+        </div>
+        <div className="space-y-1.5">
+          <Skeleton className="h-4 w-24" />
+          <Skeleton className="h-10 w-full" />
+        </div>
+      </div>
+    </div>
+    {/* Contact Section */}
+    <div className="space-y-4 bg-muted/40 p-4 -mx-6 px-6">
+      <div className="flex items-center gap-2 pb-3 border-b border-border/50">
+        <Skeleton className="h-4 w-4" />
+        <Skeleton className="h-4 w-36" />
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1.5">
+          <Skeleton className="h-4 w-20" />
+          <Skeleton className="h-10 w-full" />
+        </div>
+        <div className="space-y-1.5">
+          <Skeleton className="h-4 w-16" />
+          <Skeleton className="h-10 w-full" />
+        </div>
+      </div>
+      <div className="space-y-1.5">
+        <Skeleton className="h-4 w-16" />
+        <Skeleton className="h-10 w-full" />
+      </div>
+    </div>
+    {/* Physical Section */}
+    <div className="space-y-4">
+      <div className="flex items-center gap-2 pb-3 border-b border-border/50">
+        <Skeleton className="h-4 w-4" />
+        <Skeleton className="h-4 w-28" />
+      </div>
+      <div className="grid grid-cols-3 gap-3">
+        <div className="space-y-1.5">
+          <Skeleton className="h-4 w-16" />
+          <Skeleton className="h-10 w-full" />
+        </div>
+        <div className="space-y-1.5">
+          <Skeleton className="h-4 w-16" />
+          <Skeleton className="h-10 w-full" />
+        </div>
+        <div className="space-y-1.5">
+          <Skeleton className="h-4 w-12" />
+          <Skeleton className="h-10 w-full" />
+        </div>
+      </div>
+    </div>
+  </div>
+);
 
 type Donor = Tables<"donors">;
 
@@ -377,6 +452,8 @@ const EditDonorDrawer = ({ open, onOpenChange, onSuccess, donor }: EditDonorDraw
 
   const bmiStatus = getBmiStatus();
 
+  const isLoading = open && !formData.first_name && donor;
+
   if (!donor) return null;
 
   return (
@@ -390,6 +467,11 @@ const EditDonorDrawer = ({ open, onOpenChange, onSuccess, donor }: EditDonorDraw
           </SheetDescription>
         </SheetHeader>
 
+        {isLoading ? (
+          <div className="flex-1 overflow-y-auto">
+            <FormSkeleton />
+          </div>
+        ) : (
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
           <div className="flex-1 overflow-y-auto">
             
@@ -788,6 +870,7 @@ const EditDonorDrawer = ({ open, onOpenChange, onSuccess, donor }: EditDonorDraw
             </Button>
           </SheetFooter>
         </form>
+        )}
       </SheetContent>
     </Sheet>
 
