@@ -90,13 +90,13 @@ const StepFour = () => {
       <FormField
         control={control}
         name="availabilityExplanation"
-        render={({ field }) => (
+        render={({ field, fieldState }) => (
           <FormItem>
             <FormLabel>Please explain availability *</FormLabel>
             <FormControl>
               <Textarea 
                 placeholder="Describe your availability for donation..."
-                className="min-h-[100px]"
+                className={`min-h-[100px] ${fieldState.error ? "border-destructive focus-visible:ring-destructive" : ""}`}
                 {...field} 
               />
             </FormControl>

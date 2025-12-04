@@ -19,11 +19,11 @@ const StepThree = () => {
       <FormField
         control={control}
         name="dateOfBirth"
-        render={({ field }) => (
+        render={({ field, fieldState }) => (
           <FormItem>
             <FormLabel>Date of Birth *</FormLabel>
             <FormControl>
-              <Input type="date" {...field} />
+              <Input type="date" error={!!fieldState.error} {...field} />
             </FormControl>
             <FormMessage />
           </FormItem>
@@ -64,12 +64,12 @@ const StepThree = () => {
       <FormField
         control={control}
         name="height"
-        render={({ field }) => (
+        render={({ field, fieldState }) => (
           <FormItem>
             <FormLabel>Height *</FormLabel>
             <Select onValueChange={field.onChange} defaultValue={field.value}>
               <FormControl>
-                <SelectTrigger>
+                <SelectTrigger className={fieldState.error ? "border-destructive" : ""}>
                   <SelectValue placeholder="Select height" />
                 </SelectTrigger>
               </FormControl>
@@ -87,11 +87,11 @@ const StepThree = () => {
       <FormField
         control={control}
         name="weight"
-        render={({ field }) => (
+        render={({ field, fieldState }) => (
           <FormItem>
             <FormLabel>Weight (lbs.) *</FormLabel>
             <FormControl>
-              <Input type="number" placeholder="150" {...field} />
+              <Input type="number" placeholder="150" error={!!fieldState.error} {...field} />
             </FormControl>
             <FormMessage />
           </FormItem>
