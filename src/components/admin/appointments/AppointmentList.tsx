@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { Plus, Calendar, Clock, MoreHorizontal, MapPin, Car } from "lucide-react";
+import { format, parseISO } from "date-fns";
+import { Calendar, Clock, MapPin, MoreHorizontal, User, Car } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -18,53 +19,59 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
-import { format, parseISO } from "date-fns";
-import AppointmentScheduleDialog from "@/components/admin/appointments/AppointmentScheduleDialog";
-import AppointmentStatusBadge from "@/components/admin/appointments/AppointmentStatusBadge";
-import type { AppointmentWithDonor, AppointmentStatus } from "@/components/admin/appointments/types";
+import AppointmentStatusBadge from "./AppointmentStatusBadge";
+import { AppointmentWithDonor, AppointmentStatus, STATUS_OPTIONS } from "./types";
 
-interface DonorAppointmentsProps {
-  donorId: string;
-  donorName?: string;
+interface AppointmentListProps {
+  onRefresh?: () => void;
 }
 
-const DonorAppointments = ({ donorId, donorName }: DonorAppointmentsProps) => {
+const AppointmentList = ({ onRefresh }: AppointmentListProps) => {
+  const navigate = useNavigate();
   const { toast } = useToast();
   const [appointments, setAppointments] = useState<AppointmentWithDonor[]>([]);
   const [loading, setLoading] = useState(true);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [lastDonorLetter, setLastDonorLetter] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     fetchAppointments();
-  }, [donorId]);
+  }, []);
 
   const fetchAppointments = async () => {
+    setLoading(true);
     try {
       const { data, error } = await supabase
         .from("appointments")
         .select(`
           *,
+          donors:donor_id (
+            id,
+            donor_id,
+            first_name,
+            last_name
+          ),
           prescreener:prescreened_by (
             full_name
           )
         `)
-        .eq("donor_id", donorId)
-        .order("appointment_date", { ascending: false });
+        .order("appointment_date", { ascending: true });
 
       if (error) throw error;
       setAppointments(data || []);
-
-      // Get last donation letter for auto-suggestion
-      const lastDonation = data?.find(
-        (apt) => apt.appointment_type === "donation" && apt.donor_letter
-      );
-      if (lastDonation?.donor_letter) {
-        setLastDonorLetter(lastDonation.donor_letter);
-      }
     } catch (error) {
       console.error("Error fetching appointments:", error);
     } finally {
@@ -89,6 +96,8 @@ const DonorAppointments = ({ donorId, donorName }: DonorAppointmentsProps) => {
         title: "Status updated",
         description: `Appointment marked as ${status.replace("_", " ")}.`,
       });
+
+      onRefresh?.();
     } catch (error) {
       console.error("Error updating status:", error);
       toast({
@@ -99,15 +108,27 @@ const DonorAppointments = ({ donorId, donorName }: DonorAppointmentsProps) => {
     }
   };
 
+  const filteredAppointments = appointments.filter((apt) => {
+    if (statusFilter !== "all" && apt.status !== statusFilter) return false;
+    if (typeFilter !== "all" && apt.appointment_type !== typeFilter) return false;
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      const donorName = `${apt.donors?.first_name} ${apt.donors?.last_name}`.toLowerCase();
+      const donorId = apt.donors?.donor_id?.toLowerCase() || "";
+      if (!donorName.includes(query) && !donorId.includes(query)) return false;
+    }
+    return true;
+  });
+
   if (loading) {
     return (
       <Card>
-        <CardHeader className="pb-3">
-          <Skeleton className="h-5 w-32" />
+        <CardHeader>
+          <Skeleton className="h-6 w-48" />
         </CardHeader>
         <CardContent>
-          <div className="space-y-3">
-            {[1, 2, 3].map((i) => (
+          <div className="space-y-2">
+            {[1, 2, 3, 4, 5].map((i) => (
               <Skeleton key={i} className="h-14 w-full" />
             ))}
           </div>
@@ -117,29 +138,56 @@ const DonorAppointments = ({ donorId, donorName }: DonorAppointmentsProps) => {
   }
 
   return (
-    <>
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between pb-3">
-          <CardTitle className="text-base font-semibold">
-            Appointments ({appointments.length})
-          </CardTitle>
-          <Button size="sm" onClick={() => setDialogOpen(true)}>
-            <Plus className="h-4 w-4 mr-1" />
-            Schedule
-          </Button>
-        </CardHeader>
-        <CardContent>
-          {appointments.length === 0 ? (
-            <div className="text-center py-10 text-muted-foreground border-2 border-dashed rounded-lg">
-              <Calendar className="h-8 w-8 mx-auto mb-2 opacity-50" />
-              <p className="text-sm font-medium">No appointments scheduled</p>
-              <p className="text-sm">Click "Schedule" to create one.</p>
-            </div>
-          ) : (
+    <Card>
+      <CardHeader className="pb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <CardTitle>All Appointments ({filteredAppointments.length})</CardTitle>
+          <div className="flex items-center gap-2">
+            <Input
+              placeholder="Search donor..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-[200px]"
+            />
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-[140px]">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                {STATUS_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={typeFilter} onValueChange={setTypeFilter}>
+              <SelectTrigger className="w-[130px]">
+                <SelectValue placeholder="Type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Types</SelectItem>
+                <SelectItem value="screening">Screening</SelectItem>
+                <SelectItem value="donation">Donation</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {filteredAppointments.length === 0 ? (
+          <div className="text-center py-10 text-muted-foreground border-2 border-dashed rounded-lg">
+            <Calendar className="h-8 w-8 mx-auto mb-2 opacity-50" />
+            <p className="text-sm font-medium">No appointments found</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Date & Time</TableHead>
+                  <TableHead>Donor</TableHead>
                   <TableHead>Type</TableHead>
                   <TableHead>Location</TableHead>
                   <TableHead>Status</TableHead>
@@ -148,8 +196,8 @@ const DonorAppointments = ({ donorId, donorName }: DonorAppointmentsProps) => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {appointments.map((apt) => (
-                  <TableRow key={apt.id}>
+                {filteredAppointments.map((apt) => (
+                  <TableRow key={apt.id} className="cursor-pointer hover:bg-muted/50">
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <Calendar className="h-4 w-4 text-muted-foreground" />
@@ -165,18 +213,27 @@ const DonorAppointments = ({ donorId, donorName }: DonorAppointmentsProps) => {
                       </div>
                     </TableCell>
                     <TableCell>
+                      <div
+                        className="flex items-center gap-2 cursor-pointer hover:text-primary"
+                        onClick={() => navigate(`/admin/donors/${apt.donor_id}`)}
+                      >
+                        <User className="h-4 w-4 text-muted-foreground" />
+                        <div>
+                          <div className="text-sm font-medium">
+                            {apt.donors?.first_name} {apt.donors?.last_name}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {apt.donors?.donor_id}
+                          </div>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
                       <div className="flex items-center gap-2">
-                        <span className="text-sm capitalize">
-                          {apt.appointment_type?.replace("_", " ") || "—"}
-                        </span>
+                        <span className="text-sm capitalize">{apt.appointment_type || "—"}</span>
                         {apt.donor_letter && (
                           <Badge variant="outline" className="text-xs">
                             {apt.donor_letter}
-                          </Badge>
-                        )}
-                        {apt.purpose && (
-                          <Badge variant="secondary" className="text-xs capitalize">
-                            {apt.purpose}
                           </Badge>
                         )}
                       </div>
@@ -195,13 +252,7 @@ const DonorAppointments = ({ donorId, donorName }: DonorAppointmentsProps) => {
                       <div className="flex items-center gap-2">
                         <AppointmentStatusBadge status={apt.status} />
                         {(apt.uber_needed || apt.uber_ordered) && (
-                          <span title={apt.uber_ordered ? "Uber Ordered" : "Uber Needed"}>
-                            <Car
-                              className={`h-4 w-4 ${
-                                apt.uber_ordered ? "text-green-600" : "text-amber-600"
-                              }`}
-                            />
-                          </span>
+                          <Car className={`h-4 w-4 ${apt.uber_ordered ? "text-green-600" : "text-amber-600"}`} />
                         )}
                       </div>
                     </TableCell>
@@ -216,6 +267,10 @@ const DonorAppointments = ({ donorId, donorName }: DonorAppointmentsProps) => {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => navigate(`/admin/donors/${apt.donor_id}`)}>
+                            View Donor
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
                           <DropdownMenuItem onClick={() => updateStatus(apt.id, "completed")}>
                             Mark Completed
                           </DropdownMenuItem>
@@ -225,7 +280,6 @@ const DonorAppointments = ({ donorId, donorName }: DonorAppointmentsProps) => {
                           <DropdownMenuItem onClick={() => updateStatus(apt.id, "no_show")}>
                             Mark No Show
                           </DropdownMenuItem>
-                          <DropdownMenuSeparator />
                           <DropdownMenuItem onClick={() => updateStatus(apt.id, "deferred")}>
                             Mark Deferred
                           </DropdownMenuItem>
@@ -242,20 +296,11 @@ const DonorAppointments = ({ donorId, donorName }: DonorAppointmentsProps) => {
                 ))}
               </TableBody>
             </Table>
-          )}
-        </CardContent>
-      </Card>
-
-      <AppointmentScheduleDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        donorId={donorId}
-        donorName={donorName}
-        lastDonorLetter={lastDonorLetter}
-        onSuccess={fetchAppointments}
-      />
-    </>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 };
 
-export default DonorAppointments;
+export default AppointmentList;
