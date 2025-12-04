@@ -46,6 +46,13 @@ interface Payment {
   check_number: string | null;
   check_date: string | null;
   received_date: string | null;
+  date_ordered: string | null;
+  date_issued: string | null;
+  check_issued: boolean;
+  check_mailed: boolean;
+  check_voided: boolean;
+  memo: string | null;
+  comment: string | null;
   created_at: string;
   created_by: string | null;
 }
@@ -178,23 +185,25 @@ const DonorPayments = ({ donorId }: DonorPaymentsProps) => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Date</TableHead>
+                    <TableHead>Ordered</TableHead>
                     <TableHead>Type</TableHead>
                     <TableHead>Amount</TableHead>
                     <TableHead>Check #</TableHead>
-                    <TableHead>Check Date</TableHead>
                     <TableHead>Received</TableHead>
+                    <TableHead>Status</TableHead>
                     <TableHead className="w-[50px]"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {payments.map((payment) => (
-                    <TableRow key={payment.id}>
+                    <TableRow key={payment.id} className={payment.check_voided ? "opacity-50" : ""}>
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <Calendar className="h-4 w-4 text-muted-foreground" />
                           <span className="text-sm">
-                            {format(parseISO(payment.created_at), "MMM d, yyyy")}
+                            {payment.date_ordered
+                              ? format(parseISO(payment.date_ordered), "MMM d, yyyy")
+                              : format(parseISO(payment.created_at), "MMM d, yyyy")}
                           </span>
                         </div>
                       </TableCell>
@@ -207,7 +216,7 @@ const DonorPayments = ({ donorId }: DonorPaymentsProps) => {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <span className="font-medium text-green-600">
+                        <span className={`font-medium ${payment.check_voided ? "line-through text-muted-foreground" : "text-green-600"}`}>
                           ${payment.amount.toFixed(2)}
                         </span>
                       </TableCell>
@@ -222,14 +231,25 @@ const DonorPayments = ({ donorId }: DonorPaymentsProps) => {
                         )}
                       </TableCell>
                       <TableCell className="text-sm">
-                        {payment.check_date
-                          ? format(parseISO(payment.check_date), "MMM d, yyyy")
-                          : "—"}
-                      </TableCell>
-                      <TableCell className="text-sm">
                         {payment.received_date
                           ? format(parseISO(payment.received_date), "MMM d, yyyy")
                           : "—"}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-1 flex-wrap">
+                          {payment.check_voided && (
+                            <Badge variant="destructive" className="text-xs">Voided</Badge>
+                          )}
+                          {payment.check_issued && !payment.check_voided && (
+                            <Badge variant="outline" className="text-xs">Issued</Badge>
+                          )}
+                          {payment.check_mailed && !payment.check_voided && (
+                            <Badge variant="secondary" className="text-xs">Mailed</Badge>
+                          )}
+                          {!payment.check_issued && !payment.check_mailed && !payment.check_voided && (
+                            <Badge variant="outline" className="text-xs text-muted-foreground">Pending</Badge>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell>
                         <DropdownMenu>

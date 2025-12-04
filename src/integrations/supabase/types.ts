@@ -130,36 +130,57 @@ export type Database = {
         Row: {
           appointment_id: string
           cell_count: number | null
+          clots_vol_ml: number | null
           created_at: string
+          departure_time: string | null
           doctor_comments: string | null
           doctor_id: string | null
+          exam_room_time: string | null
+          final_vol_ml: number | null
           id: string
           lab_tech_id: string | null
           lot_number: string | null
+          lot_number_2: string | null
+          lot_number_3: string | null
+          lot_number_4: string | null
           updated_at: string
           volume_ml: number | null
         }
         Insert: {
           appointment_id: string
           cell_count?: number | null
+          clots_vol_ml?: number | null
           created_at?: string
+          departure_time?: string | null
           doctor_comments?: string | null
           doctor_id?: string | null
+          exam_room_time?: string | null
+          final_vol_ml?: number | null
           id?: string
           lab_tech_id?: string | null
           lot_number?: string | null
+          lot_number_2?: string | null
+          lot_number_3?: string | null
+          lot_number_4?: string | null
           updated_at?: string
           volume_ml?: number | null
         }
         Update: {
           appointment_id?: string
           cell_count?: number | null
+          clots_vol_ml?: number | null
           created_at?: string
+          departure_time?: string | null
           doctor_comments?: string | null
           doctor_id?: string | null
+          exam_room_time?: string | null
+          final_vol_ml?: number | null
           id?: string
           lab_tech_id?: string | null
           lot_number?: string | null
+          lot_number_2?: string | null
+          lot_number_3?: string | null
+          lot_number_4?: string | null
           updated_at?: string
           volume_ml?: number | null
         }
@@ -333,43 +354,79 @@ export type Database = {
       follow_ups: {
         Row: {
           appointment_id: string
+          aspiration_sites_notes: string | null
+          checked_aspiration_sites: boolean | null
           completed_at: string | null
           completed_by: string | null
           created_at: string
+          current_pain_level: number | null
+          doctor_rating: number | null
           donor_id: string
           id: string
+          infection_details: string | null
           notes: string | null
+          nurse_rating: number | null
           pain_level: number | null
+          pain_medication_details: string | null
           procedure_feedback: string | null
+          signs_of_infection: boolean | null
+          staff_rating: number | null
           status: Database["public"]["Enums"]["follow_up_status"]
+          symptoms_details: string | null
+          took_pain_medication: boolean | null
+          unusual_symptoms: boolean | null
           updated_at: string
           would_donate_again: boolean | null
         }
         Insert: {
           appointment_id: string
+          aspiration_sites_notes?: string | null
+          checked_aspiration_sites?: boolean | null
           completed_at?: string | null
           completed_by?: string | null
           created_at?: string
+          current_pain_level?: number | null
+          doctor_rating?: number | null
           donor_id: string
           id?: string
+          infection_details?: string | null
           notes?: string | null
+          nurse_rating?: number | null
           pain_level?: number | null
+          pain_medication_details?: string | null
           procedure_feedback?: string | null
+          signs_of_infection?: boolean | null
+          staff_rating?: number | null
           status?: Database["public"]["Enums"]["follow_up_status"]
+          symptoms_details?: string | null
+          took_pain_medication?: boolean | null
+          unusual_symptoms?: boolean | null
           updated_at?: string
           would_donate_again?: boolean | null
         }
         Update: {
           appointment_id?: string
+          aspiration_sites_notes?: string | null
+          checked_aspiration_sites?: boolean | null
           completed_at?: string | null
           completed_by?: string | null
           created_at?: string
+          current_pain_level?: number | null
+          doctor_rating?: number | null
           donor_id?: string
           id?: string
+          infection_details?: string | null
           notes?: string | null
+          nurse_rating?: number | null
           pain_level?: number | null
+          pain_medication_details?: string | null
           procedure_feedback?: string | null
+          signs_of_infection?: boolean | null
+          staff_rating?: number | null
           status?: Database["public"]["Enums"]["follow_up_status"]
+          symptoms_details?: string | null
+          took_pain_medication?: boolean | null
+          unusual_symptoms?: boolean | null
           updated_at?: string
           would_donate_again?: boolean | null
         }
@@ -435,11 +492,18 @@ export type Database = {
           amount: number
           appointment_id: string | null
           check_date: string | null
+          check_issued: boolean | null
+          check_mailed: boolean | null
           check_number: string | null
+          check_voided: boolean | null
+          comment: string | null
           created_at: string
           created_by: string | null
+          date_issued: string | null
+          date_ordered: string | null
           donor_id: string
           id: string
+          memo: string | null
           payment_type: Database["public"]["Enums"]["payment_type"]
           received_date: string | null
           updated_at: string
@@ -448,11 +512,18 @@ export type Database = {
           amount: number
           appointment_id?: string | null
           check_date?: string | null
+          check_issued?: boolean | null
+          check_mailed?: boolean | null
           check_number?: string | null
+          check_voided?: boolean | null
+          comment?: string | null
           created_at?: string
           created_by?: string | null
+          date_issued?: string | null
+          date_ordered?: string | null
           donor_id: string
           id?: string
+          memo?: string | null
           payment_type: Database["public"]["Enums"]["payment_type"]
           received_date?: string | null
           updated_at?: string
@@ -461,11 +532,18 @@ export type Database = {
           amount?: number
           appointment_id?: string | null
           check_date?: string | null
+          check_issued?: boolean | null
+          check_mailed?: boolean | null
           check_number?: string | null
+          check_voided?: boolean | null
+          comment?: string | null
           created_at?: string
           created_by?: string | null
+          date_issued?: string | null
+          date_ordered?: string | null
           donor_id?: string
           id?: string
+          memo?: string | null
           payment_type?: Database["public"]["Enums"]["payment_type"]
           received_date?: string | null
           updated_at?: string
