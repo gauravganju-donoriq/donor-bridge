@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Save, User, Heart, Calendar, FileText, Loader2 } from "lucide-react";
+import { ArrowLeft, Save, User, Heart, Calendar, FileText, Loader2, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -16,6 +16,7 @@ import DonorPersonalInfo from "@/components/admin/donor-detail/DonorPersonalInfo
 import DonorMedicalHistory from "@/components/admin/donor-detail/DonorMedicalHistory";
 import DonorAppointments from "@/components/admin/donor-detail/DonorAppointments";
 import DonorDocuments from "@/components/admin/donor-detail/DonorDocuments";
+import DonorNotes from "@/components/admin/donor-detail/DonorNotes";
 
 type Donor = Tables<"donors">;
 
@@ -202,6 +203,10 @@ const DonorDetail = () => {
             <FileText className="h-3.5 w-3.5" />
             Documents
           </TabsTrigger>
+          <TabsTrigger value="notes" className="gap-1.5 text-sm h-7 px-3">
+            <MessageSquare className="h-3.5 w-3.5" />
+            Notes
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="personal" className="mt-4">
@@ -228,6 +233,10 @@ const DonorDetail = () => {
 
         <TabsContent value="documents" className="mt-4">
           <DonorDocuments donorId={donor.id} />
+        </TabsContent>
+
+        <TabsContent value="notes" className="mt-4">
+          <DonorNotes donorId={donor.id} />
         </TabsContent>
       </Tabs>
     </div>
