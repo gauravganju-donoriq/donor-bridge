@@ -15,6 +15,7 @@ import AdminLayout from "./components/admin/AdminLayout";
 import ProtectedRoute from "./components/admin/ProtectedRoute";
 import Dashboard from "./pages/admin/Dashboard";
 import Donors from "./pages/admin/Donors";
+import DonorDetail from "./pages/admin/DonorDetail";
 import DonorApproval from "./pages/admin/DonorApproval";
 import Appointments from "./pages/admin/Appointments";
 import Reports from "./pages/admin/Reports";
@@ -49,6 +50,7 @@ const App = () => (
               <Route index element={<Navigate to="/admin/dashboard" replace />} />
               <Route path="dashboard" element={<Dashboard />} />
               <Route path="donors" element={<Donors />} />
+              <Route path="donors/:id" element={<DonorDetail />} />
               <Route path="donor-approval" element={<DonorApproval />} />
               <Route path="appointments" element={<Appointments />} />
               <Route path="reports" element={<Reports />} />
