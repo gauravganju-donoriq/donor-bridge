@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Save, User, Heart, Calendar, FileText, Loader2, MessageSquare, Clock, DollarSign } from "lucide-react";
+import { ArrowLeft, Save, User, Heart, Calendar, FileText, Loader2, MessageSquare, Clock, DollarSign, FlaskConical, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -19,6 +19,8 @@ import DonorDocuments from "@/components/admin/donor-detail/DonorDocuments";
 import DonorNotes from "@/components/admin/donor-detail/DonorNotes";
 import DonorTimeline from "@/components/admin/donor-detail/DonorTimeline";
 import DonorPayments from "@/components/admin/donor-detail/DonorPayments";
+import DonorResults from "@/components/admin/donor-detail/DonorResults";
+import DonorFollowUps from "@/components/admin/donor-detail/DonorFollowUps";
 
 type Donor = Tables<"donors">;
 
@@ -188,7 +190,7 @@ const DonorDetail = () => {
 
       {/* Tabs */}
       <Tabs defaultValue="personal" className="space-y-4">
-        <TabsList className="h-9">
+        <TabsList className="h-9 flex-wrap">
           <TabsTrigger value="personal" className="gap-1.5 text-sm h-7 px-3">
             <User className="h-3.5 w-3.5" />
             Personal
@@ -200,6 +202,14 @@ const DonorDetail = () => {
           <TabsTrigger value="appointments" className="gap-1.5 text-sm h-7 px-3">
             <Calendar className="h-3.5 w-3.5" />
             Appointments
+          </TabsTrigger>
+          <TabsTrigger value="results" className="gap-1.5 text-sm h-7 px-3">
+            <FlaskConical className="h-3.5 w-3.5" />
+            Results
+          </TabsTrigger>
+          <TabsTrigger value="followups" className="gap-1.5 text-sm h-7 px-3">
+            <Phone className="h-3.5 w-3.5" />
+            Follow-Ups
           </TabsTrigger>
           <TabsTrigger value="payments" className="gap-1.5 text-sm h-7 px-3">
             <DollarSign className="h-3.5 w-3.5" />
@@ -239,6 +249,14 @@ const DonorDetail = () => {
 
         <TabsContent value="appointments" className="mt-4">
           <DonorAppointments donorId={donor.id} donorName={`${donor.first_name} ${donor.last_name}`} />
+        </TabsContent>
+
+        <TabsContent value="results" className="mt-4">
+          <DonorResults donorId={donor.id} />
+        </TabsContent>
+
+        <TabsContent value="followups" className="mt-4">
+          <DonorFollowUps donorId={donor.id} donorName={`${donor.first_name} ${donor.last_name}`} />
         </TabsContent>
 
         <TabsContent value="payments" className="mt-4">
