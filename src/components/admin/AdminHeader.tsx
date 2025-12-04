@@ -12,6 +12,7 @@ import {
 import NotificationBell from "./NotificationBell";
 
 const routeTitles: Record<string, string> = {
+  "/admin/dashboard": "Dashboard",
   "/admin/donors": "Donors",
   "/admin/donor-approval": "Donor Approval",
   "/admin/appointments": "Appointments",

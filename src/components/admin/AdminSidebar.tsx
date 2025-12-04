@@ -10,6 +10,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Dna,
+  LayoutDashboard,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
@@ -22,6 +23,7 @@ import {
 import SidebarUserSection from "./SidebarUserSection";
 
 const navItems = [
+  { to: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/admin/donors", label: "Donors", icon: Users },
   { to: "/admin/donor-approval", label: "Donor Approval", icon: ClipboardCheck },
   { to: "/admin/appointments", label: "Appointments", icon: Calendar },
