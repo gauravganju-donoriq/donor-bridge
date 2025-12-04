@@ -271,6 +271,7 @@ const EditDonorDrawer = ({ open, onOpenChange, onSuccess, donor }: EditDonorDraw
                     value={formData.first_name}
                     onChange={(e) => updateField("first_name", e.target.value)}
                     placeholder="John"
+                    autoFocus
                   />
                 </div>
                 <div className="space-y-1.5">
