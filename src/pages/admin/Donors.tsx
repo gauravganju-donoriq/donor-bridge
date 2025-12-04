@@ -60,6 +60,7 @@ import { differenceInYears } from "date-fns";
 import { useAuth } from "@/hooks/useAuth";
 import type { Tables } from "@/integrations/supabase/types";
 import AddDonorDrawer from "@/components/admin/AddDonorDrawer";
+import EditDonorDrawer from "@/components/admin/EditDonorDrawer";
 
 type Donor = Tables<"donors">;
 type EligibilityStatus = "eligible" | "ineligible" | "pending_review";
@@ -91,6 +92,10 @@ const Donors = () => {
 
   // Add donor dialog
   const [addDialogOpen, setAddDialogOpen] = useState(false);
+
+  // Edit donor drawer
+  const [editDrawerOpen, setEditDrawerOpen] = useState(false);
+  const [donorToEdit, setDonorToEdit] = useState<Donor | null>(null);
 
   // Fetch donors function
   const fetchDonors = async () => {
@@ -476,7 +481,10 @@ const Donors = () => {
                               <Eye className="h-4 w-4 mr-2" />
                               View Details
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => navigate(`/admin/donors/${donor.id}`)}>
+                            <DropdownMenuItem onClick={() => {
+                              setDonorToEdit(donor);
+                              setEditDrawerOpen(true);
+                            }}>
                               <Edit className="h-4 w-4 mr-2" />
                               Edit Donor
                             </DropdownMenuItem>
@@ -540,6 +548,14 @@ const Donors = () => {
         open={addDialogOpen}
         onOpenChange={setAddDialogOpen}
         onSuccess={fetchDonors}
+      />
+
+      {/* Edit Donor Drawer */}
+      <EditDonorDrawer
+        open={editDrawerOpen}
+        onOpenChange={setEditDrawerOpen}
+        onSuccess={fetchDonors}
+        donor={donorToEdit}
       />
     </div>
   );
