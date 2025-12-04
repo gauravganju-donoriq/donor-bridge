@@ -1,6 +1,5 @@
 import { useLocation } from "react-router-dom";
-import { Bell, Search } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
   Breadcrumb,
@@ -10,6 +9,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
+import NotificationBell from "./NotificationBell";
 
 const routeTitles: Record<string, string> = {
   "/admin/donors": "Donors",
@@ -57,12 +57,8 @@ const AdminHeader = () => {
           </div>
         </div>
 
-        {/* Notifications (placeholder) */}
-        <Button variant="ghost" size="icon" className="relative">
-          <Bell className="h-5 w-5 text-muted-foreground" />
-          {/* Notification badge - uncomment when implementing */}
-          {/* <span className="absolute top-1 right-1 h-2 w-2 bg-destructive rounded-full" /> */}
-        </Button>
+        {/* Notifications */}
+        <NotificationBell />
       </div>
     </header>
   );
