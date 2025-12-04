@@ -1,28 +1,23 @@
 import { Outlet } from "react-router-dom";
-import AdminNav from "./AdminNav";
-import UserMenu from "./UserMenu";
+import AdminSidebar from "./AdminSidebar";
+import AdminHeader from "./AdminHeader";
 
 const AdminLayout = () => {
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b bg-card">
-        <div className="container mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="text-xl font-bold text-primary">Lonza</span>
-            <span className="text-sm text-muted-foreground">Admin Portal</span>
-          </div>
-          <UserMenu />
-        </div>
-      </header>
+    <div className="flex min-h-screen w-full bg-background">
+      {/* Sidebar */}
+      <AdminSidebar />
 
-      {/* Navigation */}
-      <AdminNav />
+      {/* Main Content Area */}
+      <div className="flex flex-col flex-1 overflow-hidden">
+        {/* Header */}
+        <AdminHeader />
 
-      {/* Main Content */}
-      <main className="container mx-auto px-4 py-6">
-        <Outlet />
-      </main>
+        {/* Page Content */}
+        <main className="flex-1 overflow-y-auto p-6">
+          <Outlet />
+        </main>
+      </div>
     </div>
   );
 };
