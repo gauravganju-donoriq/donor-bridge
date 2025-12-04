@@ -89,6 +89,8 @@ const AddDonorDrawer = ({ open, onOpenChange, onSuccess }: AddDonorDrawerProps) 
   const [saving, setSaving] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
   const [showConfirmClose, setShowConfirmClose] = useState(false);
+  const [showDuplicateWarning, setShowDuplicateWarning] = useState(false);
+  const [duplicateDonors, setDuplicateDonors] = useState<{ donor_id: string; first_name: string; last_name: string; birth_date: string }[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
 
@@ -265,11 +267,32 @@ const AddDonorDrawer = ({ open, onOpenChange, onSuccess }: AddDonorDrawerProps) 
 
   const canSubmit = formData.first_name && formData.last_name && formData.birth_date && formData.assigned_sex;
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const checkForDuplicates = async () => {
+    const { data } = await supabase
+      .from("donors")
+      .select("donor_id, first_name, last_name, birth_date")
+      .ilike("first_name", formData.first_name.trim())
+      .ilike("last_name", formData.last_name.trim())
+      .eq("birth_date", formData.birth_date);
+    
+    return data || [];
+  };
+
+  const handleSubmit = async (e: React.FormEvent, skipDuplicateCheck = false) => {
     e.preventDefault();
 
     if (!validateForm()) {
       return;
+    }
+
+    // Check for duplicates first (unless skipped)
+    if (!skipDuplicateCheck) {
+      const duplicates = await checkForDuplicates();
+      if (duplicates.length > 0) {
+        setDuplicateDonors(duplicates);
+        setShowDuplicateWarning(true);
+        return;
+      }
     }
 
     setSaving(true);
@@ -766,6 +789,33 @@ const AddDonorDrawer = ({ open, onOpenChange, onSuccess }: AddDonorDrawerProps) 
           <AlertDialogCancel>Keep Editing</AlertDialogCancel>
           <AlertDialogAction onClick={() => handleClose(true)}>
             Discard
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+
+    <AlertDialog open={showDuplicateWarning} onOpenChange={setShowDuplicateWarning}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Potential Duplicate Found</AlertDialogTitle>
+          <AlertDialogDescription asChild>
+            <div className="space-y-3">
+              <p>A donor with similar information already exists:</p>
+              <div className="bg-muted rounded-md p-3 space-y-1">
+                {duplicateDonors.map((d) => (
+                  <p key={d.donor_id} className="text-sm font-medium">
+                    {d.donor_id} • {d.first_name} {d.last_name} • DOB: {d.birth_date}
+                  </p>
+                ))}
+              </div>
+              <p>Do you still want to create this donor?</p>
+            </div>
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction onClick={(e) => { setShowDuplicateWarning(false); handleSubmit(e as any, true); }}>
+            Create Anyway
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
