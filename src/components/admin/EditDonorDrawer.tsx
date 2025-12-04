@@ -195,6 +195,9 @@ const EditDonorDrawer = ({ open, onOpenChange, onSuccess, donor }: EditDonorDraw
   const validateField = (field: string, value: string) => {
     let error = "";
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const phoneRegex = /^\(\d{3}\) \d{3}-\d{4}$/;
+    const phoneFields = ["cell_phone", "home_phone", "work_phone"];
+    
     if (field === "first_name" && !value.trim()) {
       error = "First name is required";
     } else if (field === "last_name" && !value.trim()) {
@@ -205,6 +208,8 @@ const EditDonorDrawer = ({ open, onOpenChange, onSuccess, donor }: EditDonorDraw
       error = "Assigned sex is required";
     } else if (field === "email" && value && !emailRegex.test(value)) {
       error = "Please enter a valid email address";
+    } else if (phoneFields.includes(field) && value && !phoneRegex.test(value)) {
+      error = "Format: (555) 123-4567";
     }
     setErrors((prev) => ({ ...prev, [field]: error }));
     return !error;
@@ -487,8 +492,13 @@ const EditDonorDrawer = ({ open, onOpenChange, onSuccess, donor }: EditDonorDraw
                     id="edit_cell_phone"
                     value={formData.cell_phone}
                     onChange={(e) => updateField("cell_phone", formatPhoneNumber(e.target.value))}
+                    onBlur={() => handleBlur("cell_phone")}
                     placeholder="(555) 123-4567"
+                    className={touched.cell_phone && errors.cell_phone ? "border-destructive" : ""}
                   />
+                  {touched.cell_phone && errors.cell_phone && (
+                    <p className="text-xs text-destructive">{errors.cell_phone}</p>
+                  )}
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="edit_email">Email</Label>
@@ -514,8 +524,13 @@ const EditDonorDrawer = ({ open, onOpenChange, onSuccess, donor }: EditDonorDraw
                     id="edit_home_phone"
                     value={formData.home_phone}
                     onChange={(e) => updateField("home_phone", formatPhoneNumber(e.target.value))}
+                    onBlur={() => handleBlur("home_phone")}
                     placeholder="(555) 123-4567"
+                    className={touched.home_phone && errors.home_phone ? "border-destructive" : ""}
                   />
+                  {touched.home_phone && errors.home_phone && (
+                    <p className="text-xs text-destructive">{errors.home_phone}</p>
+                  )}
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="edit_work_phone">Work Phone</Label>
@@ -523,8 +538,13 @@ const EditDonorDrawer = ({ open, onOpenChange, onSuccess, donor }: EditDonorDraw
                     id="edit_work_phone"
                     value={formData.work_phone}
                     onChange={(e) => updateField("work_phone", formatPhoneNumber(e.target.value))}
+                    onBlur={() => handleBlur("work_phone")}
                     placeholder="(555) 123-4567"
+                    className={touched.work_phone && errors.work_phone ? "border-destructive" : ""}
                   />
+                  {touched.work_phone && errors.work_phone && (
+                    <p className="text-xs text-destructive">{errors.work_phone}</p>
+                  )}
                 </div>
               </div>
 
