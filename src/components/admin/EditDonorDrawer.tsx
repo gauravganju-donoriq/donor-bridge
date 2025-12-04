@@ -197,6 +197,7 @@ const EditDonorDrawer = ({ open, onOpenChange, onSuccess, donor }: EditDonorDraw
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const phoneRegex = /^\(\d{3}\) \d{3}-\d{4}$/;
     const zipRegex = /^\d{5}(-\d{4})?$/;
+    const ssnRegex = /^\d{3}-\d{2}-\d{4}$/;
     const phoneFields = ["cell_phone", "home_phone", "work_phone"];
     
     if (field === "first_name" && !value.trim()) {
@@ -226,6 +227,8 @@ const EditDonorDrawer = ({ open, onOpenChange, onSuccess, donor }: EditDonorDraw
       error = "Format: (555) 123-4567";
     } else if (field === "postal_code" && value && !zipRegex.test(value)) {
       error = "Format: 12345 or 12345-6789";
+    } else if (field === "social_security" && value && !ssnRegex.test(value)) {
+      error = "Format: XXX-XX-XXXX";
     }
     setErrors((prev) => ({ ...prev, [field]: error }));
     return !error;
@@ -759,9 +762,14 @@ const EditDonorDrawer = ({ open, onOpenChange, onSuccess, donor }: EditDonorDraw
                   id="edit_social_security"
                   value={formData.social_security}
                   onChange={(e) => updateField("social_security", formatSSN(e.target.value))}
+                  onBlur={() => handleBlur("social_security")}
                   placeholder="XXX-XX-XXXX"
                   maxLength={11}
+                  className={touched.social_security && errors.social_security ? "border-destructive" : ""}
                 />
+                {touched.social_security && errors.social_security && (
+                  <p className="text-xs text-destructive">{errors.social_security}</p>
+                )}
               </div>
             </Section>
 
