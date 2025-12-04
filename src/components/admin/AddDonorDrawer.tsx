@@ -51,6 +51,28 @@ const formatSSN = (value: string) => {
   return `${numbers.slice(0, 3)}-${numbers.slice(3, 5)}-${numbers.slice(5, 9)}`;
 };
 
+const Section = ({ 
+  icon: Icon, 
+  title, 
+  children, 
+  alternate = false 
+}: { 
+  icon: React.ElementType; 
+  title: string; 
+  children: React.ReactNode;
+  alternate?: boolean;
+}) => (
+  <div className={`px-6 py-5 ${alternate ? 'bg-muted/40' : ''}`}>
+    <div className="flex items-center gap-2 pb-3 mb-4 border-b border-border/50">
+      <Icon className="h-4 w-4 text-muted-foreground" />
+      <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+    </div>
+    <div className="space-y-3">
+      {children}
+    </div>
+  </div>
+);
+
 const AddDonorDrawer = ({ open, onOpenChange, onSuccess }: AddDonorDrawerProps) => {
   const { toast } = useToast();
   const { user } = useAuth();
@@ -212,13 +234,6 @@ const AddDonorDrawer = ({ open, onOpenChange, onSuccess }: AddDonorDrawerProps) 
     }
   };
 
-  const SectionHeader = ({ icon: Icon, title }: { icon: React.ElementType; title: string }) => (
-    <div className="flex items-center gap-2 pb-2 pt-6 mt-2 first:pt-0 first:mt-0 border-b border-border/50">
-      <Icon className="h-4 w-4 text-muted-foreground" />
-      <h3 className="text-sm font-semibold text-foreground">{title}</h3>
-    </div>
-  );
-
   const getBmiStatus = () => {
     const bmiNum = parseFloat(bmi);
     if (isNaN(bmiNum)) return null;
@@ -241,338 +256,338 @@ const AddDonorDrawer = ({ open, onOpenChange, onSuccess }: AddDonorDrawerProps) 
         </SheetHeader>
 
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
-          <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+          <div className="flex-1 overflow-y-auto">
             
             {/* PERSONAL INFO */}
-            <SectionHeader icon={User} title="Personal Information" />
-            
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="first_name">First Name *</Label>
-                <Input
-                  id="first_name"
-                  value={formData.first_name}
-                  onChange={(e) => updateField("first_name", e.target.value)}
-                  placeholder="John"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="last_name">Last Name *</Label>
-                <Input
-                  id="last_name"
-                  value={formData.last_name}
-                  onChange={(e) => updateField("last_name", e.target.value)}
-                  placeholder="Doe"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="middle_initial">M.I.</Label>
-                <Input
-                  id="middle_initial"
-                  value={formData.middle_initial}
-                  onChange={(e) => updateField("middle_initial", e.target.value.slice(0, 1).toUpperCase())}
-                  maxLength={1}
-                  placeholder="A"
-                />
-              </div>
-              <div className="col-span-2 space-y-1.5">
-                <Label htmlFor="chosen_name">Chosen Name</Label>
-                <Input
-                  id="chosen_name"
-                  value={formData.chosen_name}
-                  onChange={(e) => updateField("chosen_name", e.target.value)}
-                  placeholder="Preferred name"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="birth_date">Date of Birth *</Label>
-                <div className="relative">
+            <Section icon={User} title="Personal Information">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="first_name">First Name *</Label>
                   <Input
-                    id="birth_date"
-                    type="date"
-                    value={formData.birth_date}
-                    onChange={(e) => updateField("birth_date", e.target.value)}
+                    id="first_name"
+                    value={formData.first_name}
+                    onChange={(e) => updateField("first_name", e.target.value)}
+                    placeholder="John"
                   />
-                  {age !== null && (
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-                      {age} yrs
-                    </span>
-                  )}
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="last_name">Last Name *</Label>
+                  <Input
+                    id="last_name"
+                    value={formData.last_name}
+                    onChange={(e) => updateField("last_name", e.target.value)}
+                    placeholder="Doe"
+                  />
                 </div>
               </div>
-              <div className="space-y-1.5">
-                <Label>Assigned Sex *</Label>
-                <Select value={formData.assigned_sex} onValueChange={(v) => updateField("assigned_sex", v)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="male">Male</SelectItem>
-                    <SelectItem value="female">Female</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label>Ethnicity</Label>
-                <Select value={formData.ethnicity} onValueChange={(v) => updateField("ethnicity", v)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="No Answer">No Answer</SelectItem>
-                    <SelectItem value="Hispanic or Latino">Hispanic or Latino</SelectItem>
-                    <SelectItem value="Not Hispanic or Latino">Not Hispanic or Latino</SelectItem>
-                    <SelectItem value="Unknown">Unknown</SelectItem>
-                  </SelectContent>
-                </Select>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="middle_initial">M.I.</Label>
+                  <Input
+                    id="middle_initial"
+                    value={formData.middle_initial}
+                    onChange={(e) => updateField("middle_initial", e.target.value.slice(0, 1).toUpperCase())}
+                    maxLength={1}
+                    placeholder="A"
+                  />
+                </div>
+                <div className="col-span-2 space-y-1.5">
+                  <Label htmlFor="chosen_name">Chosen Name</Label>
+                  <Input
+                    id="chosen_name"
+                    value={formData.chosen_name}
+                    onChange={(e) => updateField("chosen_name", e.target.value)}
+                    placeholder="Preferred name"
+                  />
+                </div>
               </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="pronouns">Pronouns</Label>
-                <Input
-                  id="pronouns"
-                  value={formData.pronouns}
-                  onChange={(e) => updateField("pronouns", e.target.value)}
-                  placeholder="e.g. he/him"
-                />
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="birth_date">Date of Birth *</Label>
+                  <div className="relative">
+                    <Input
+                      id="birth_date"
+                      type="date"
+                      value={formData.birth_date}
+                      onChange={(e) => updateField("birth_date", e.target.value)}
+                    />
+                    {age !== null && (
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                        {age} yrs
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Assigned Sex *</Label>
+                  <Select value={formData.assigned_sex} onValueChange={(v) => updateField("assigned_sex", v)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="male">Male</SelectItem>
+                      <SelectItem value="female">Female</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-            </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label>Ethnicity</Label>
+                  <Select value={formData.ethnicity} onValueChange={(v) => updateField("ethnicity", v)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="No Answer">No Answer</SelectItem>
+                      <SelectItem value="Hispanic or Latino">Hispanic or Latino</SelectItem>
+                      <SelectItem value="Not Hispanic or Latino">Not Hispanic or Latino</SelectItem>
+                      <SelectItem value="Unknown">Unknown</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="pronouns">Pronouns</Label>
+                  <Input
+                    id="pronouns"
+                    value={formData.pronouns}
+                    onChange={(e) => updateField("pronouns", e.target.value)}
+                    placeholder="e.g. he/him"
+                  />
+                </div>
+              </div>
+            </Section>
 
             {/* CONTACT INFO */}
-            <SectionHeader icon={Phone} title="Contact Information" />
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="cell_phone">Cell Phone</Label>
-                <Input
-                  id="cell_phone"
-                  value={formData.cell_phone}
-                  onChange={(e) => updateField("cell_phone", formatPhoneNumber(e.target.value))}
-                  placeholder="(555) 123-4567"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => updateField("email", e.target.value)}
-                  placeholder="john@example.com"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="home_phone">Home Phone</Label>
-                <Input
-                  id="home_phone"
-                  value={formData.home_phone}
-                  onChange={(e) => updateField("home_phone", formatPhoneNumber(e.target.value))}
-                  placeholder="(555) 123-4567"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="work_phone">Work Phone</Label>
-                <Input
-                  id="work_phone"
-                  value={formData.work_phone}
-                  onChange={(e) => updateField("work_phone", formatPhoneNumber(e.target.value))}
-                  placeholder="(555) 123-4567"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="address_line_1">Address</Label>
-              <Input
-                id="address_line_1"
-                value={formData.address_line_1}
-                onChange={(e) => updateField("address_line_1", e.target.value)}
-                placeholder="Street address"
-              />
-            </div>
-
-            <Input
-              id="address_line_2"
-              value={formData.address_line_2}
-              onChange={(e) => updateField("address_line_2", e.target.value)}
-              placeholder="Apt, suite, unit, etc."
-            />
-
-            <div className="grid grid-cols-5 gap-3">
-              <div className="col-span-2 space-y-1.5">
-                <Label htmlFor="city">City</Label>
-                <Input
-                  id="city"
-                  value={formData.city}
-                  onChange={(e) => updateField("city", e.target.value)}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label>State</Label>
-                <Select value={formData.state} onValueChange={(v) => updateField("state", v)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="—" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {US_STATES.map((state) => (
-                      <SelectItem key={state} value={state}>{state}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="col-span-2 space-y-1.5">
-                <Label htmlFor="postal_code">ZIP</Label>
-                <Input
-                  id="postal_code"
-                  value={formData.postal_code}
-                  onChange={(e) => updateField("postal_code", e.target.value.slice(0, 10))}
-                  placeholder="12345"
-                />
-              </div>
-            </div>
-
-            {/* PHYSICAL & MEDICAL */}
-            <SectionHeader icon={Activity} title="Physical & Medical" />
-
-            <div className="grid grid-cols-3 gap-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="height_inches">Height (in)</Label>
-                <Input
-                  id="height_inches"
-                  type="number"
-                  value={formData.height_inches}
-                  onChange={(e) => updateField("height_inches", e.target.value)}
-                  placeholder="66"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="weight_pounds">Weight (lbs)</Label>
-                <Input
-                  id="weight_pounds"
-                  type="number"
-                  value={formData.weight_pounds}
-                  onChange={(e) => updateField("weight_pounds", e.target.value)}
-                  placeholder="150"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label>BMI</Label>
-                <div className="h-9 px-3 py-2 rounded-md border bg-muted/50 text-sm flex items-center gap-2">
-                  <span>{bmi}</span>
-                  {bmiStatus && (
-                    <span className={`text-xs ${bmiStatus.color}`}>({bmiStatus.label})</span>
-                  )}
+            <Section icon={Phone} title="Contact Information" alternate>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="cell_phone">Cell Phone</Label>
+                  <Input
+                    id="cell_phone"
+                    value={formData.cell_phone}
+                    onChange={(e) => updateField("cell_phone", formatPhoneNumber(e.target.value))}
+                    placeholder="(555) 123-4567"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => updateField("email", e.target.value)}
+                    placeholder="john@example.com"
+                  />
                 </div>
               </div>
-            </div>
 
-            <div className="grid grid-cols-3 gap-3">
-              <div className="space-y-1.5">
-                <Label>CMV Status</Label>
-                <Select value={formData.cmv_positive} onValueChange={(v) => updateField("cmv_positive", v)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Unknown" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="unknown">Unknown</SelectItem>
-                    <SelectItem value="positive">Positive</SelectItem>
-                    <SelectItem value="negative">Negative</SelectItem>
-                  </SelectContent>
-                </Select>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="home_phone">Home Phone</Label>
+                  <Input
+                    id="home_phone"
+                    value={formData.home_phone}
+                    onChange={(e) => updateField("home_phone", formatPhoneNumber(e.target.value))}
+                    placeholder="(555) 123-4567"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="work_phone">Work Phone</Label>
+                  <Input
+                    id="work_phone"
+                    value={formData.work_phone}
+                    onChange={(e) => updateField("work_phone", formatPhoneNumber(e.target.value))}
+                    placeholder="(555) 123-4567"
+                  />
+                </div>
               </div>
+
               <div className="space-y-1.5">
-                <Label>Alcohol Use</Label>
-                <RadioGroup
-                  value={formData.alcohol_use}
-                  onValueChange={(v) => updateField("alcohol_use", v)}
-                  className="flex gap-4 h-9 items-center"
-                >
-                  <div className="flex items-center gap-1.5">
-                    <RadioGroupItem value="yes" id="alcohol_yes" />
-                    <Label htmlFor="alcohol_yes" className="font-normal text-sm">Yes</Label>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <RadioGroupItem value="no" id="alcohol_no" />
-                    <Label htmlFor="alcohol_no" className="font-normal text-sm">No</Label>
-                  </div>
-                </RadioGroup>
+                <Label htmlFor="address_line_1">Address</Label>
+                <Input
+                  id="address_line_1"
+                  value={formData.address_line_1}
+                  onChange={(e) => updateField("address_line_1", e.target.value)}
+                  placeholder="Street address"
+                />
               </div>
-              <div className="space-y-1.5">
-                <Label>Tobacco Use</Label>
-                <RadioGroup
-                  value={formData.tobacco_use}
-                  onValueChange={(v) => updateField("tobacco_use", v)}
-                  className="flex gap-4 h-9 items-center"
-                >
-                  <div className="flex items-center gap-1.5">
-                    <RadioGroupItem value="yes" id="tobacco_yes" />
-                    <Label htmlFor="tobacco_yes" className="font-normal text-sm">Yes</Label>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <RadioGroupItem value="no" id="tobacco_no" />
-                    <Label htmlFor="tobacco_no" className="font-normal text-sm">No</Label>
-                  </div>
-                </RadioGroup>
+
+              <Input
+                id="address_line_2"
+                value={formData.address_line_2}
+                onChange={(e) => updateField("address_line_2", e.target.value)}
+                placeholder="Apt, suite, unit, etc."
+              />
+
+              <div className="grid grid-cols-5 gap-3">
+                <div className="col-span-2 space-y-1.5">
+                  <Label htmlFor="city">City</Label>
+                  <Input
+                    id="city"
+                    value={formData.city}
+                    onChange={(e) => updateField("city", e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>State</Label>
+                  <Select value={formData.state} onValueChange={(v) => updateField("state", v)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="—" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {US_STATES.map((state) => (
+                        <SelectItem key={state} value={state}>{state}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="col-span-2 space-y-1.5">
+                  <Label htmlFor="postal_code">ZIP</Label>
+                  <Input
+                    id="postal_code"
+                    value={formData.postal_code}
+                    onChange={(e) => updateField("postal_code", e.target.value.slice(0, 10))}
+                    placeholder="12345"
+                  />
+                </div>
               </div>
-            </div>
+            </Section>
+
+            {/* PHYSICAL & MEDICAL */}
+            <Section icon={Activity} title="Physical & Medical">
+              <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="height_inches">Height (in)</Label>
+                  <Input
+                    id="height_inches"
+                    type="number"
+                    value={formData.height_inches}
+                    onChange={(e) => updateField("height_inches", e.target.value)}
+                    placeholder="66"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="weight_pounds">Weight (lbs)</Label>
+                  <Input
+                    id="weight_pounds"
+                    type="number"
+                    value={formData.weight_pounds}
+                    onChange={(e) => updateField("weight_pounds", e.target.value)}
+                    placeholder="150"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>BMI</Label>
+                  <div className="h-9 px-3 py-2 rounded-md border bg-muted/50 text-sm flex items-center gap-2">
+                    <span>{bmi}</span>
+                    {bmiStatus && (
+                      <span className={`text-xs ${bmiStatus.color}`}>({bmiStatus.label})</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-1.5">
+                  <Label>CMV Status</Label>
+                  <Select value={formData.cmv_positive} onValueChange={(v) => updateField("cmv_positive", v)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Unknown" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="unknown">Unknown</SelectItem>
+                      <SelectItem value="positive">Positive</SelectItem>
+                      <SelectItem value="negative">Negative</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Alcohol Use</Label>
+                  <RadioGroup
+                    value={formData.alcohol_use}
+                    onValueChange={(v) => updateField("alcohol_use", v)}
+                    className="flex gap-4 h-9 items-center"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <RadioGroupItem value="yes" id="alcohol_yes" />
+                      <Label htmlFor="alcohol_yes" className="font-normal text-sm">Yes</Label>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <RadioGroupItem value="no" id="alcohol_no" />
+                      <Label htmlFor="alcohol_no" className="font-normal text-sm">No</Label>
+                    </div>
+                  </RadioGroup>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Tobacco Use</Label>
+                  <RadioGroup
+                    value={formData.tobacco_use}
+                    onValueChange={(v) => updateField("tobacco_use", v)}
+                    className="flex gap-4 h-9 items-center"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <RadioGroupItem value="yes" id="tobacco_yes" />
+                      <Label htmlFor="tobacco_yes" className="font-normal text-sm">Yes</Label>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <RadioGroupItem value="no" id="tobacco_no" />
+                      <Label htmlFor="tobacco_no" className="font-normal text-sm">No</Label>
+                    </div>
+                  </RadioGroup>
+                </div>
+              </div>
+            </Section>
 
             {/* ELIGIBILITY */}
-            <SectionHeader icon={Shield} title="Eligibility & Compliance" />
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label>Eligibility Status</Label>
-                <Select value={formData.eligibility_status} onValueChange={(v) => updateField("eligibility_status", v)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="eligible">Eligible</SelectItem>
-                    <SelectItem value="pending_review">Pending Review</SelectItem>
-                    <SelectItem value="ineligible">Ineligible</SelectItem>
-                  </SelectContent>
-                </Select>
+            <Section icon={Shield} title="Eligibility & Compliance" alternate>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label>Eligibility Status</Label>
+                  <Select value={formData.eligibility_status} onValueChange={(v) => updateField("eligibility_status", v)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="eligible">Eligible</SelectItem>
+                      <SelectItem value="pending_review">Pending Review</SelectItem>
+                      <SelectItem value="ineligible">Ineligible</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Ineligibility Reason</Label>
+                  <Select value={formData.ineligibility_reason} onValueChange={(v) => updateField("ineligibility_reason", v)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="N/A">N/A</SelectItem>
+                      <SelectItem value="Medical Condition">Medical Condition</SelectItem>
+                      <SelectItem value="Age Requirement">Age Requirement</SelectItem>
+                      <SelectItem value="BMI Out of Range">BMI Out of Range</SelectItem>
+                      <SelectItem value="Failed Screening">Failed Screening</SelectItem>
+                      <SelectItem value="Withdrew">Withdrew</SelectItem>
+                      <SelectItem value="Other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-              <div className="space-y-1.5">
-                <Label>Ineligibility Reason</Label>
-                <Select value={formData.ineligibility_reason} onValueChange={(v) => updateField("ineligibility_reason", v)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="N/A">N/A</SelectItem>
-                    <SelectItem value="Medical Condition">Medical Condition</SelectItem>
-                    <SelectItem value="Age Requirement">Age Requirement</SelectItem>
-                    <SelectItem value="BMI Out of Range">BMI Out of Range</SelectItem>
-                    <SelectItem value="Failed Screening">Failed Screening</SelectItem>
-                    <SelectItem value="Withdrew">Withdrew</SelectItem>
-                    <SelectItem value="Other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="social_security">Social Security Number</Label>
-              <Input
-                id="social_security"
-                value={formData.social_security}
-                onChange={(e) => updateField("social_security", formatSSN(e.target.value))}
-                placeholder="XXX-XX-XXXX"
-                maxLength={11}
-              />
-            </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="social_security">Social Security Number</Label>
+                <Input
+                  id="social_security"
+                  value={formData.social_security}
+                  onChange={(e) => updateField("social_security", formatSSN(e.target.value))}
+                  placeholder="XXX-XX-XXXX"
+                  maxLength={11}
+                />
+              </div>
+            </Section>
 
           </div>
 
