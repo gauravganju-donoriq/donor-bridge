@@ -403,7 +403,11 @@ const Donors = () => {
                   </TableRow>
                 ) : (
                   donors.map((donor) => (
-                    <TableRow key={donor.id} className="group">
+                    <TableRow 
+                      key={donor.id} 
+                      className="group cursor-pointer hover:bg-muted/50"
+                      onClick={() => navigate(`/admin/donors/${donor.id}`)}
+                    >
                       <TableCell className="font-mono text-sm">
                         {donor.donor_id}
                       </TableCell>
@@ -449,7 +453,7 @@ const Donors = () => {
                       <TableCell>
                         {getEligibilityBadge(donor.eligibility_status)}
                       </TableCell>
-                      <TableCell>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button
@@ -463,11 +467,11 @@ const Donors = () => {
                           <DropdownMenuContent align="end">
                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => navigate(`/admin/donors/${donor.id}`)}>
                               <Eye className="h-4 w-4 mr-2" />
                               View Details
                             </DropdownMenuItem>
-                            <DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => navigate(`/admin/donors/${donor.id}`)}>
                               <Edit className="h-4 w-4 mr-2" />
                               Edit Donor
                             </DropdownMenuItem>
