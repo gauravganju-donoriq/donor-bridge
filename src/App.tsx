@@ -13,6 +13,7 @@ import NotFound from "./pages/NotFound";
 import Login from "./pages/admin/Login";
 import AdminLayout from "./components/admin/AdminLayout";
 import ProtectedRoute from "./components/admin/ProtectedRoute";
+import Dashboard from "./pages/admin/Dashboard";
 import Donors from "./pages/admin/Donors";
 import DonorApproval from "./pages/admin/DonorApproval";
 import Appointments from "./pages/admin/Appointments";
@@ -45,7 +46,8 @@ const App = () => (
                 </ProtectedRoute>
               }
             >
-              <Route index element={<Navigate to="/admin/donors" replace />} />
+              <Route index element={<Navigate to="/admin/dashboard" replace />} />
+              <Route path="dashboard" element={<Dashboard />} />
               <Route path="donors" element={<Donors />} />
               <Route path="donor-approval" element={<DonorApproval />} />
               <Route path="appointments" element={<Appointments />} />
