@@ -11,6 +11,7 @@ import {
   ChevronRight,
   Dna,
   LayoutDashboard,
+  Phone,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
@@ -27,6 +28,7 @@ const navItems = [
   { to: "/admin/donors", label: "Donors", icon: Users },
   { to: "/admin/donor-approval", label: "Donor Approval", icon: ClipboardCheck },
   { to: "/admin/appointments", label: "Appointments", icon: Calendar },
+  { to: "/admin/follow-ups", label: "Follow-Ups", icon: Phone },
   { to: "/admin/reports", label: "Reports", icon: FileText },
 ];
 

@@ -18,6 +18,7 @@ import Donors from "./pages/admin/Donors";
 import DonorDetail from "./pages/admin/DonorDetail";
 import DonorApproval from "./pages/admin/DonorApproval";
 import Appointments from "./pages/admin/Appointments";
+import FollowUps from "./pages/admin/FollowUps";
 import Reports from "./pages/admin/Reports";
 import Users from "./pages/admin/Users";
 import Logs from "./pages/admin/Logs";
@@ -53,6 +54,7 @@ const App = () => (
               <Route path="donors/:id" element={<DonorDetail />} />
               <Route path="donor-approval" element={<DonorApproval />} />
               <Route path="appointments" element={<Appointments />} />
+              <Route path="follow-ups" element={<FollowUps />} />
               <Route path="reports" element={<Reports />} />
               <Route
                 path="users"

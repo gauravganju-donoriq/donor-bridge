@@ -4,4 +4,5 @@ export { default as AppointmentCalendar } from "./AppointmentCalendar";
 export { default as AppointmentList } from "./AppointmentList";
 export { default as DonationResultsDialog } from "./DonationResultsDialog";
 export { default as PaymentEntryDialog } from "./PaymentEntryDialog";
+export { default as FollowUpCompleteDialog } from "./FollowUpCompleteDialog";
 export * from "./types";
