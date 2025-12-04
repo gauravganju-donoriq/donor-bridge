@@ -233,7 +233,7 @@ const DonorDetail = () => {
         </TabsContent>
 
         <TabsContent value="appointments" className="mt-4">
-          <DonorAppointments donorId={donor.id} />
+          <DonorAppointments donorId={donor.id} donorName={`${donor.first_name} ${donor.last_name}`} />
         </TabsContent>
 
         <TabsContent value="documents" className="mt-4">

@@ -51,9 +51,17 @@ export type Database = {
           created_at: string | null
           created_by: string | null
           donor_id: string
+          donor_letter: string | null
           id: string
+          location: Database["public"]["Enums"]["appointment_location"] | null
           notes: string | null
+          prescreened_by: string | null
+          prescreened_date: string | null
+          purpose: Database["public"]["Enums"]["appointment_purpose"] | null
+          rescheduled_from: string | null
           status: Database["public"]["Enums"]["appointment_status"] | null
+          uber_needed: boolean | null
+          uber_ordered: boolean | null
           updated_at: string | null
         }
         Insert: {
@@ -62,9 +70,17 @@ export type Database = {
           created_at?: string | null
           created_by?: string | null
           donor_id: string
+          donor_letter?: string | null
           id?: string
+          location?: Database["public"]["Enums"]["appointment_location"] | null
           notes?: string | null
+          prescreened_by?: string | null
+          prescreened_date?: string | null
+          purpose?: Database["public"]["Enums"]["appointment_purpose"] | null
+          rescheduled_from?: string | null
           status?: Database["public"]["Enums"]["appointment_status"] | null
+          uber_needed?: boolean | null
+          uber_ordered?: boolean | null
           updated_at?: string | null
         }
         Update: {
@@ -73,9 +89,17 @@ export type Database = {
           created_at?: string | null
           created_by?: string | null
           donor_id?: string
+          donor_letter?: string | null
           id?: string
+          location?: Database["public"]["Enums"]["appointment_location"] | null
           notes?: string | null
+          prescreened_by?: string | null
+          prescreened_date?: string | null
+          purpose?: Database["public"]["Enums"]["appointment_purpose"] | null
+          rescheduled_from?: string | null
           status?: Database["public"]["Enums"]["appointment_status"] | null
+          uber_needed?: boolean | null
+          uber_ordered?: boolean | null
           updated_at?: string | null
         }
         Relationships: [
@@ -84,6 +108,81 @@ export type Database = {
             columns: ["donor_id"]
             isOneToOne: false
             referencedRelation: "donors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_prescreened_by_fkey"
+            columns: ["prescreened_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_rescheduled_from_fkey"
+            columns: ["rescheduled_from"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      donation_results: {
+        Row: {
+          appointment_id: string
+          cell_count: number | null
+          created_at: string
+          doctor_comments: string | null
+          doctor_id: string | null
+          id: string
+          lab_tech_id: string | null
+          lot_number: string | null
+          updated_at: string
+          volume_ml: number | null
+        }
+        Insert: {
+          appointment_id: string
+          cell_count?: number | null
+          created_at?: string
+          doctor_comments?: string | null
+          doctor_id?: string | null
+          id?: string
+          lab_tech_id?: string | null
+          lot_number?: string | null
+          updated_at?: string
+          volume_ml?: number | null
+        }
+        Update: {
+          appointment_id?: string
+          cell_count?: number | null
+          created_at?: string
+          doctor_comments?: string | null
+          doctor_id?: string | null
+          id?: string
+          lab_tech_id?: string | null
+          lot_number?: string | null
+          updated_at?: string
+          volume_ml?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "donation_results_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: true
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "donation_results_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "donation_results_lab_tech_id_fkey"
+            columns: ["lab_tech_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -231,6 +330,73 @@ export type Database = {
         }
         Relationships: []
       }
+      follow_ups: {
+        Row: {
+          appointment_id: string
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          donor_id: string
+          id: string
+          notes: string | null
+          pain_level: number | null
+          procedure_feedback: string | null
+          status: Database["public"]["Enums"]["follow_up_status"]
+          updated_at: string
+          would_donate_again: boolean | null
+        }
+        Insert: {
+          appointment_id: string
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          donor_id: string
+          id?: string
+          notes?: string | null
+          pain_level?: number | null
+          procedure_feedback?: string | null
+          status?: Database["public"]["Enums"]["follow_up_status"]
+          updated_at?: string
+          would_donate_again?: boolean | null
+        }
+        Update: {
+          appointment_id?: string
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          donor_id?: string
+          id?: string
+          notes?: string | null
+          pain_level?: number | null
+          procedure_feedback?: string | null
+          status?: Database["public"]["Enums"]["follow_up_status"]
+          updated_at?: string
+          would_donate_again?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "follow_ups_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: true
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "follow_ups_completed_by_fkey"
+            columns: ["completed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "follow_ups_donor_id_fkey"
+            columns: ["donor_id"]
+            isOneToOne: false
+            referencedRelation: "donors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           created_at: string
@@ -263,6 +429,70 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      payments: {
+        Row: {
+          amount: number
+          appointment_id: string | null
+          check_date: string | null
+          check_number: string | null
+          created_at: string
+          created_by: string | null
+          donor_id: string
+          id: string
+          payment_type: Database["public"]["Enums"]["payment_type"]
+          received_date: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          appointment_id?: string | null
+          check_date?: string | null
+          check_number?: string | null
+          created_at?: string
+          created_by?: string | null
+          donor_id: string
+          id?: string
+          payment_type: Database["public"]["Enums"]["payment_type"]
+          received_date?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          appointment_id?: string | null
+          check_date?: string | null
+          check_number?: string | null
+          created_at?: string
+          created_by?: string | null
+          donor_id?: string
+          id?: string
+          payment_type?: Database["public"]["Enums"]["payment_type"]
+          received_date?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_donor_id_fkey"
+            columns: ["donor_id"]
+            isOneToOne: false
+            referencedRelation: "donors"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -480,8 +710,24 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "staff" | "readonly"
-      appointment_status: "scheduled" | "completed" | "cancelled" | "no_show"
+      appointment_location: "bethesda" | "germantown"
+      appointment_purpose: "research" | "clinical"
+      appointment_status:
+        | "scheduled"
+        | "completed"
+        | "cancelled"
+        | "no_show"
+        | "rescheduled"
+        | "deferred"
+        | "sample_not_taken"
       eligibility_status: "eligible" | "ineligible" | "pending_review"
+      follow_up_status:
+        | "pending"
+        | "attempted_1"
+        | "attempted_2"
+        | "completed"
+        | "email_sent"
+      payment_type: "screening" | "donation"
       sex_type: "male" | "female"
       submission_status: "pending" | "approved" | "rejected" | "linked_to_donor"
     }
@@ -612,8 +858,26 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "staff", "readonly"],
-      appointment_status: ["scheduled", "completed", "cancelled", "no_show"],
+      appointment_location: ["bethesda", "germantown"],
+      appointment_purpose: ["research", "clinical"],
+      appointment_status: [
+        "scheduled",
+        "completed",
+        "cancelled",
+        "no_show",
+        "rescheduled",
+        "deferred",
+        "sample_not_taken",
+      ],
       eligibility_status: ["eligible", "ineligible", "pending_review"],
+      follow_up_status: [
+        "pending",
+        "attempted_1",
+        "attempted_2",
+        "completed",
+        "email_sent",
+      ],
+      payment_type: ["screening", "donation"],
       sex_type: ["male", "female"],
       submission_status: ["pending", "approved", "rejected", "linked_to_donor"],
     },
