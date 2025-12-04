@@ -91,7 +91,7 @@ const AdminSidebar = () => {
   return (
     <aside
       className={cn(
-        "flex flex-col h-screen bg-sidebar-background border-r border-sidebar-border transition-all duration-300 ease-in-out",
+        "flex flex-col h-screen bg-sidebar-background border-r border-sidebar-border transition-all duration-300 ease-in-out flex-shrink-0",
         collapsed ? "w-16" : "w-64"
       )}
     >
