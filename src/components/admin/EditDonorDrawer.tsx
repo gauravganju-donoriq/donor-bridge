@@ -196,6 +196,7 @@ const EditDonorDrawer = ({ open, onOpenChange, onSuccess, donor }: EditDonorDraw
     let error = "";
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const phoneRegex = /^\(\d{3}\) \d{3}-\d{4}$/;
+    const zipRegex = /^\d{5}(-\d{4})?$/;
     const phoneFields = ["cell_phone", "home_phone", "work_phone"];
     
     if (field === "first_name" && !value.trim()) {
@@ -223,6 +224,8 @@ const EditDonorDrawer = ({ open, onOpenChange, onSuccess, donor }: EditDonorDraw
       error = "Please enter a valid email address";
     } else if (phoneFields.includes(field) && value && !phoneRegex.test(value)) {
       error = "Format: (555) 123-4567";
+    } else if (field === "postal_code" && value && !zipRegex.test(value)) {
+      error = "Format: 12345 or 12345-6789";
     }
     setErrors((prev) => ({ ...prev, [field]: error }));
     return !error;
@@ -619,8 +622,13 @@ const EditDonorDrawer = ({ open, onOpenChange, onSuccess, donor }: EditDonorDraw
                     id="edit_postal_code"
                     value={formData.postal_code}
                     onChange={(e) => updateField("postal_code", e.target.value.slice(0, 10))}
+                    onBlur={() => handleBlur("postal_code")}
                     placeholder="12345"
+                    className={touched.postal_code && errors.postal_code ? "border-destructive" : ""}
                   />
+                  {touched.postal_code && errors.postal_code && (
+                    <p className="text-xs text-destructive">{errors.postal_code}</p>
+                  )}
                 </div>
               </div>
             </Section>
