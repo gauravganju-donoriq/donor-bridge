@@ -185,26 +185,26 @@ const DonorDetail = () => {
 
       {/* Tabs */}
       <Tabs defaultValue="personal" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-grid">
-          <TabsTrigger value="personal" className="gap-2">
-            <User className="h-4 w-4 hidden sm:inline" />
-            Personal Info
+        <TabsList className="h-9">
+          <TabsTrigger value="personal" className="gap-1.5 text-sm h-7 px-3">
+            <User className="h-3.5 w-3.5" />
+            Personal
           </TabsTrigger>
-          <TabsTrigger value="medical" className="gap-2">
-            <Heart className="h-4 w-4 hidden sm:inline" />
+          <TabsTrigger value="medical" className="gap-1.5 text-sm h-7 px-3">
+            <Heart className="h-3.5 w-3.5" />
             Medical
           </TabsTrigger>
-          <TabsTrigger value="appointments" className="gap-2">
-            <Calendar className="h-4 w-4 hidden sm:inline" />
+          <TabsTrigger value="appointments" className="gap-1.5 text-sm h-7 px-3">
+            <Calendar className="h-3.5 w-3.5" />
             Appointments
           </TabsTrigger>
-          <TabsTrigger value="documents" className="gap-2">
-            <FileText className="h-4 w-4 hidden sm:inline" />
+          <TabsTrigger value="documents" className="gap-1.5 text-sm h-7 px-3">
+            <FileText className="h-3.5 w-3.5" />
             Documents
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="personal">
+        <TabsContent value="personal" className="mt-4">
           <DonorPersonalInfo
             donor={donor}
             formData={formData}
@@ -213,7 +213,7 @@ const DonorDetail = () => {
           />
         </TabsContent>
 
-        <TabsContent value="medical">
+        <TabsContent value="medical" className="mt-4">
           <DonorMedicalHistory
             donor={donor}
             formData={formData}
@@ -222,11 +222,11 @@ const DonorDetail = () => {
           />
         </TabsContent>
 
-        <TabsContent value="appointments">
+        <TabsContent value="appointments" className="mt-4">
           <DonorAppointments donorId={donor.id} />
         </TabsContent>
 
-        <TabsContent value="documents">
+        <TabsContent value="documents" className="mt-4">
           <DonorDocuments donorId={donor.id} />
         </TabsContent>
       </Tabs>

@@ -1,8 +1,9 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
 import type { Tables } from "@/integrations/supabase/types";
 
 type Donor = Tables<"donors">;
@@ -31,162 +32,163 @@ const DonorMedicalHistory = ({ donor, formData, setFormData, editMode }: DonorMe
   };
 
   const getBMICategory = (bmi: number) => {
-    if (bmi < 18.5) return { label: "Underweight", color: "text-yellow-600" };
-    if (bmi < 25) return { label: "Normal", color: "text-green-600" };
-    if (bmi < 30) return { label: "Overweight", color: "text-yellow-600" };
-    return { label: "Obese", color: "text-red-600" };
+    if (bmi < 18.5) return { label: "Underweight", variant: "secondary" as const };
+    if (bmi < 25) return { label: "Normal", variant: "default" as const };
+    if (bmi < 30) return { label: "Overweight", variant: "secondary" as const };
+    return { label: "Obese", variant: "destructive" as const };
   };
 
   const bmiValue = parseFloat(getBMI());
   const bmiCategory = !isNaN(bmiValue) ? getBMICategory(bmiValue) : null;
 
+  const formatHeight = (inches: number | null) => {
+    if (!inches) return "—";
+    return `${Math.floor(inches / 12)}'${inches % 12}"`;
+  };
+
+  const FieldDisplay = ({ label, value }: { label: string; value: string | null | undefined }) => (
+    <div>
+      <span className="text-xs text-muted-foreground">{label}</span>
+      <p className="text-sm font-medium mt-0.5">{value || "—"}</p>
+    </div>
+  );
+
   return (
-    <div className="grid gap-6 md:grid-cols-2">
+    <div className="space-y-6">
       {/* Physical Measurements */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Physical Measurements</CardTitle>
-          <CardDescription>Height, weight, and BMI</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="height_inches">Height (inches)</Label>
-              {editMode ? (
+      <div>
+        <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">Physical</h4>
+        <div className="grid grid-cols-3 gap-4">
+          <div>
+            {editMode ? (
+              <>
+                <Label htmlFor="height_inches" className="text-xs">Height (inches)</Label>
                 <Input
                   id="height_inches"
                   type="number"
                   value={formData.height_inches || ""}
                   onChange={(e) => updateField("height_inches", parseInt(e.target.value) || null)}
                   placeholder="e.g., 68"
+                  className="mt-1 h-9 text-sm"
                 />
-              ) : (
-                <p className="text-sm py-2 px-3 bg-muted rounded-md">
-                  {donor.height_inches ? `${Math.floor(donor.height_inches / 12)}'${donor.height_inches % 12}"` : "—"}
-                </p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="weight_pounds">Weight (lbs)</Label>
-              {editMode ? (
+              </>
+            ) : (
+              <FieldDisplay label="Height" value={formatHeight(donor.height_inches)} />
+            )}
+          </div>
+          <div>
+            {editMode ? (
+              <>
+                <Label htmlFor="weight_pounds" className="text-xs">Weight (lbs)</Label>
                 <Input
                   id="weight_pounds"
                   type="number"
                   value={formData.weight_pounds || ""}
                   onChange={(e) => updateField("weight_pounds", parseInt(e.target.value) || null)}
                   placeholder="e.g., 150"
+                  className="mt-1 h-9 text-sm"
                 />
-              ) : (
-                <p className="text-sm py-2 px-3 bg-muted rounded-md">
-                  {donor.weight_pounds ? `${donor.weight_pounds} lbs` : "—"}
-                </p>
-              )}
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label>BMI</Label>
-            <div className="flex items-center gap-3 py-2 px-3 bg-muted rounded-md">
-              <span className="text-sm font-medium">{getBMI()}</span>
-              {bmiCategory && (
-                <span className={`text-xs ${bmiCategory.color}`}>
-                  ({bmiCategory.label})
-                </span>
-              )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Medical Status */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Medical Status</CardTitle>
-          <CardDescription>CMV status and other medical info</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="cmv_positive">CMV Status</Label>
-            {editMode ? (
-              <Select
-                value={formData.cmv_positive || "unknown"}
-                onValueChange={(value) => updateField("cmv_positive", value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select CMV status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="positive">Positive</SelectItem>
-                  <SelectItem value="negative">Negative</SelectItem>
-                  <SelectItem value="unknown">Unknown</SelectItem>
-                </SelectContent>
-              </Select>
+              </>
             ) : (
-              <p className="text-sm py-2 px-3 bg-muted rounded-md capitalize">
-                {donor.cmv_positive || "Unknown"}
-              </p>
+              <FieldDisplay label="Weight" value={donor.weight_pounds ? `${donor.weight_pounds} lbs` : null} />
             )}
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Lifestyle Factors */}
-      <Card className="md:col-span-2">
-        <CardHeader>
-          <CardTitle>Lifestyle Factors</CardTitle>
-          <CardDescription>Tobacco, alcohol, and other lifestyle information</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid md:grid-cols-2 gap-6">
-            <div className="flex items-center justify-between p-4 border rounded-lg">
-              <div>
-                <Label className="text-base">Tobacco Use</Label>
-                <p className="text-sm text-muted-foreground">Does the donor use tobacco products?</p>
-              </div>
-              {editMode ? (
-                <Switch
-                  checked={formData.tobacco_use || false}
-                  onCheckedChange={(checked) => updateField("tobacco_use", checked)}
-                />
-              ) : (
-                <span className={`font-medium ${donor.tobacco_use ? "text-red-600" : "text-green-600"}`}>
-                  {donor.tobacco_use ? "Yes" : "No"}
-                </span>
-              )}
-            </div>
-
-            <div className="flex items-center justify-between p-4 border rounded-lg">
-              <div>
-                <Label className="text-base">Alcohol Use</Label>
-                <p className="text-sm text-muted-foreground">Does the donor consume alcohol?</p>
-              </div>
-              {editMode ? (
-                <Switch
-                  checked={formData.alcohol_use || false}
-                  onCheckedChange={(checked) => updateField("alcohol_use", checked)}
-                />
-              ) : (
-                <span className={`font-medium ${donor.alcohol_use ? "text-yellow-600" : "text-green-600"}`}>
-                  {donor.alcohol_use ? "Yes" : "No"}
-                </span>
+          <div>
+            <span className="text-xs text-muted-foreground">BMI</span>
+            <div className="flex items-center gap-2 mt-0.5">
+              <span className="text-sm font-medium">{getBMI()}</span>
+              {bmiCategory && (
+                <Badge variant={bmiCategory.variant} className="text-xs h-5">
+                  {bmiCategory.label}
+                </Badge>
               )}
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
-      {/* Medical Notes */}
-      <Card className="md:col-span-2">
-        <CardHeader>
-          <CardTitle>Additional Medical Information</CardTitle>
-          <CardDescription>Any additional notes about the donor's medical history</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="text-sm text-muted-foreground text-center py-8 border-2 border-dashed rounded-lg">
-            Medical history notes and detailed records will be available in a future update.
+      <Separator />
+
+      {/* Medical Status */}
+      <div>
+        <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">Medical Status</h4>
+        <div className="grid grid-cols-3 gap-4">
+          <div>
+            {editMode ? (
+              <>
+                <Label htmlFor="cmv_positive" className="text-xs">CMV Status</Label>
+                <Select
+                  value={formData.cmv_positive || "unknown"}
+                  onValueChange={(value) => updateField("cmv_positive", value)}
+                >
+                  <SelectTrigger className="mt-1 h-9 text-sm">
+                    <SelectValue placeholder="Select" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="positive">Positive</SelectItem>
+                    <SelectItem value="negative">Negative</SelectItem>
+                    <SelectItem value="unknown">Unknown</SelectItem>
+                  </SelectContent>
+                </Select>
+              </>
+            ) : (
+              <FieldDisplay label="CMV Status" value={donor.cmv_positive} />
+            )}
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
+
+      <Separator />
+
+      {/* Lifestyle */}
+      <div>
+        <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">Lifestyle</h4>
+        <div className="grid grid-cols-2 gap-6">
+          <div className="flex items-center justify-between p-3 border rounded-lg">
+            <div>
+              <p className="text-sm font-medium">Tobacco Use</p>
+              <p className="text-xs text-muted-foreground">Uses tobacco products</p>
+            </div>
+            {editMode ? (
+              <Switch
+                checked={formData.tobacco_use || false}
+                onCheckedChange={(checked) => updateField("tobacco_use", checked)}
+              />
+            ) : (
+              <Badge variant={donor.tobacco_use ? "destructive" : "secondary"} className="text-xs">
+                {donor.tobacco_use ? "Yes" : "No"}
+              </Badge>
+            )}
+          </div>
+
+          <div className="flex items-center justify-between p-3 border rounded-lg">
+            <div>
+              <p className="text-sm font-medium">Alcohol Use</p>
+              <p className="text-xs text-muted-foreground">Consumes alcohol</p>
+            </div>
+            {editMode ? (
+              <Switch
+                checked={formData.alcohol_use || false}
+                onCheckedChange={(checked) => updateField("alcohol_use", checked)}
+              />
+            ) : (
+              <Badge variant={donor.alcohol_use ? "secondary" : "secondary"} className="text-xs">
+                {donor.alcohol_use ? "Yes" : "No"}
+              </Badge>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <Separator />
+
+      {/* Notes Placeholder */}
+      <div>
+        <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">Medical Notes</h4>
+        <div className="text-sm text-muted-foreground text-center py-6 border border-dashed rounded-lg">
+          Medical history notes will be available in a future update.
+        </div>
+      </div>
     </div>
   );
 };
