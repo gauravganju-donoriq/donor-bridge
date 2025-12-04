@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Plus,
@@ -56,9 +56,10 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { format, differenceInYears } from "date-fns";
+import { differenceInYears } from "date-fns";
 import { useAuth } from "@/hooks/useAuth";
 import type { Tables } from "@/integrations/supabase/types";
+import AddDonorDialog from "@/components/admin/AddDonorDialog";
 
 type Donor = Tables<"donors">;
 type EligibilityStatus = "eligible" | "ineligible" | "pending_review";
@@ -88,58 +89,62 @@ const Donors = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [donorToDelete, setDonorToDelete] = useState<Donor | null>(null);
 
-  // Fetch donors
-  useEffect(() => {
-    const fetchDonors = async () => {
-      setLoading(true);
-      try {
-        let query = supabase
-          .from("donors")
-          .select("*", { count: "exact" });
+  // Add donor dialog
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
 
-        // Apply filters
-        if (eligibilityFilter !== "all") {
-          query = query.eq("eligibility_status", eligibilityFilter as "eligible" | "ineligible" | "pending_review");
-        }
-        if (sexFilter !== "all") {
-          query = query.eq("assigned_sex", sexFilter as "male" | "female");
-        }
+  // Fetch donors function
+  const fetchDonors = async () => {
+    setLoading(true);
+    try {
+      let query = supabase
+        .from("donors")
+        .select("*", { count: "exact" });
 
-        // Apply search
-        if (searchQuery.trim()) {
-          const search = searchQuery.trim().toLowerCase();
-          query = query.or(
-            `first_name.ilike.%${search}%,last_name.ilike.%${search}%,donor_id.ilike.%${search}%,email.ilike.%${search}%`
-          );
-        }
-
-        // Apply pagination
-        const from = (currentPage - 1) * pageSize;
-        const to = from + pageSize - 1;
-        query = query
-          .order("created_at", { ascending: false })
-          .range(from, to);
-
-        const { data, error, count } = await query;
-
-        if (error) throw error;
-
-        setDonors(data || []);
-        setTotalCount(count || 0);
-      } catch (error) {
-        console.error("Error fetching donors:", error);
-        toast({
-          title: "Error",
-          description: "Failed to load donors. Please try again.",
-          variant: "destructive",
-        });
-      } finally {
-        setLoading(false);
+      // Apply filters
+      if (eligibilityFilter !== "all") {
+        query = query.eq("eligibility_status", eligibilityFilter as "eligible" | "ineligible" | "pending_review");
       }
-    };
+      if (sexFilter !== "all") {
+        query = query.eq("assigned_sex", sexFilter as "male" | "female");
+      }
 
+      // Apply search
+      if (searchQuery.trim()) {
+        const search = searchQuery.trim().toLowerCase();
+        query = query.or(
+          `first_name.ilike.%${search}%,last_name.ilike.%${search}%,donor_id.ilike.%${search}%,email.ilike.%${search}%`
+        );
+      }
+
+      // Apply pagination
+      const from = (currentPage - 1) * pageSize;
+      const to = from + pageSize - 1;
+      query = query
+        .order("created_at", { ascending: false })
+        .range(from, to);
+
+      const { data, error, count } = await query;
+
+      if (error) throw error;
+
+      setDonors(data || []);
+      setTotalCount(count || 0);
+    } catch (error) {
+      console.error("Error fetching donors:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load donors. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch on mount and when dependencies change
+  useEffect(() => {
     fetchDonors();
-  }, [currentPage, pageSize, eligibilityFilter, sexFilter, searchQuery, toast]);
+  }, [currentPage, pageSize, eligibilityFilter, sexFilter, searchQuery]);
 
   // Reset to first page when filters change
   useEffect(() => {
@@ -293,7 +298,7 @@ const Donors = () => {
             Manage donor records ({totalCount} total)
           </p>
         </div>
-        <Button>
+        <Button onClick={() => setAddDialogOpen(true)}>
           <Plus className="mr-2 h-4 w-4" />
           Add Donor
         </Button>
@@ -529,6 +534,13 @@ const Donors = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Add Donor Dialog */}
+      <AddDonorDialog
+        open={addDialogOpen}
+        onOpenChange={setAddDialogOpen}
+        onSuccess={fetchDonors}
+      />
     </div>
   );
 };
