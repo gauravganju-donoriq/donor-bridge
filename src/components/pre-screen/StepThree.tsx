@@ -3,6 +3,8 @@ import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/comp
 import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertTriangle, CheckCircle } from "lucide-react";
 import type { FormData } from "@/pages/PreScreenForm";
 
 const HEIGHT_OPTIONS = [
@@ -11,8 +13,30 @@ const HEIGHT_OPTIONS = [
   "6'2\"", "6'3\"", "6'4\"", "6'5\"", "6'6\"", "6'7\"", "6'8\""
 ];
 
+const heightToInches = (heightStr: string): number | null => {
+  const match = heightStr.match(/(\d+)'(\d+)"/);
+  if (!match) return null;
+  const feet = parseInt(match[1], 10);
+  const inches = parseInt(match[2], 10);
+  return feet * 12 + inches;
+};
+
+const calculateBMI = (heightStr: string, weightStr: string): number | null => {
+  const inches = heightToInches(heightStr);
+  const weight = parseFloat(weightStr);
+  if (!inches || !weight || isNaN(weight)) return null;
+  // BMI = (weight in lbs / height in inches²) × 703
+  return (weight / (inches * inches)) * 703;
+};
+
 const StepThree = () => {
-  const { control } = useFormContext<FormData>();
+  const { control, watch } = useFormContext<FormData>();
+  const height = watch("height");
+  const weight = watch("weight");
+  
+  const bmi = calculateBMI(height, weight);
+  const bmiDisplay = bmi ? bmi.toFixed(1) : null;
+  const isOverLimit = bmi !== null && bmi > 36;
 
   return (
     <div className="space-y-6">
@@ -97,6 +121,41 @@ const StepThree = () => {
           </FormItem>
         )}
       />
+
+      {/* BMI Calculator Display */}
+      {bmiDisplay && (
+        <div className="mt-4">
+          <div className="flex items-center justify-between p-4 rounded-lg border bg-muted/50">
+            <div>
+              <p className="text-sm text-muted-foreground">Your BMI</p>
+              <p className={`text-2xl font-bold ${isOverLimit ? "text-destructive" : "text-primary"}`}>
+                {bmiDisplay}
+              </p>
+            </div>
+            {isOverLimit ? (
+              <AlertTriangle className="w-8 h-8 text-destructive" />
+            ) : (
+              <CheckCircle className="w-8 h-8 text-primary" />
+            )}
+          </div>
+          
+          {isOverLimit && (
+            <Alert variant="destructive" className="mt-3">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                Your BMI of {bmiDisplay} exceeds the maximum of 36 required for bone marrow donation. 
+                You may not be eligible for this program.
+              </AlertDescription>
+            </Alert>
+          )}
+          
+          {!isOverLimit && (
+            <p className="text-sm text-muted-foreground mt-2">
+              Your BMI is within the acceptable range (36 or under) for donation.
+            </p>
+          )}
+        </div>
+      )}
     </div>
   );
 };
