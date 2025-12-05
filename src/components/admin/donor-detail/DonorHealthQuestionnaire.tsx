@@ -242,12 +242,9 @@ const DonorHealthQuestionnaire = ({ donorId, donorName = "Donor" }: DonorHealthQ
       </CardHeader>
       <CardContent>
         {questionnaires.length === 0 ? (
-          <div className="text-center py-10 border-2 border-dashed rounded-lg">
-            <ClipboardList className="h-10 w-10 mx-auto mb-3 text-muted-foreground opacity-50" />
-            <p className="text-sm font-medium mb-1">No Health Questionnaires</p>
-            <p className="text-sm text-muted-foreground max-w-sm mx-auto">
-              Generate a link to send to {donorName} to fill out the health questionnaire on an iPad or phone.
-            </p>
+          <div className="text-center py-10 border-2 border-dashed rounded-lg text-muted-foreground">
+            <ClipboardList className="h-8 w-8 mx-auto mb-2 opacity-50" />
+            <p className="text-sm">No health questionnaires</p>
           </div>
         ) : (
           <div className="space-y-3">

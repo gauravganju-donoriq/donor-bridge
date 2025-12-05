@@ -326,12 +326,9 @@ const DonorConsents = ({ donorId, donorName = "Donor" }: DonorConsentsProps) => 
       </CardHeader>
       <CardContent>
         {groupedConsents.length === 0 ? (
-          <div className="text-center py-10 border-2 border-dashed rounded-lg">
-            <ShieldCheck className="h-10 w-10 mx-auto mb-3 text-muted-foreground opacity-50" />
-            <p className="text-sm font-medium mb-1">No Consent Forms</p>
-            <p className="text-sm text-muted-foreground max-w-sm mx-auto">
-              Request consent forms by clicking the button above. A shareable link will be generated.
-            </p>
+          <div className="text-center py-10 border-2 border-dashed rounded-lg text-muted-foreground">
+            <ShieldCheck className="h-8 w-8 mx-auto mb-2 opacity-50" />
+            <p className="text-sm">No consent forms</p>
           </div>
         ) : (
           <div className="space-y-4">

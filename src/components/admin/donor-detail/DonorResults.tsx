@@ -257,8 +257,7 @@ const DonorResults = ({ donorId, donorName }: DonorResultsProps) => {
             {results.length === 0 ? (
               <div className="text-center py-10 text-muted-foreground border-2 border-dashed rounded-lg">
                 <FlaskConical className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                <p className="text-sm font-medium">No donation results recorded</p>
-                <p className="text-sm">Results will appear here after donations are completed.</p>
+                <p className="text-sm">No donation results recorded</p>
               </div>
             ) : (
               <Table>
