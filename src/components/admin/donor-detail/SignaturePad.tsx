@@ -19,9 +19,18 @@ const SignaturePad = forwardRef<SignaturePadRef, SignaturePadProps>(
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [fabricCanvas, setFabricCanvas] = useState<FabricCanvas | null>(null);
     const [hasDrawn, setHasDrawn] = useState(false);
+    const [mounted, setMounted] = useState(false);
+
+    // Wait for DOM to be ready before initializing fabric
+    useEffect(() => {
+      const frameId = requestAnimationFrame(() => {
+        setMounted(true);
+      });
+      return () => cancelAnimationFrame(frameId);
+    }, []);
 
     useEffect(() => {
-      if (!canvasRef.current) return;
+      if (!mounted || !canvasRef.current) return;
 
       const canvas = new FabricCanvas(canvasRef.current, {
         width,
@@ -31,8 +40,10 @@ const SignaturePad = forwardRef<SignaturePadRef, SignaturePadProps>(
       });
 
       // Configure drawing brush
-      canvas.freeDrawingBrush.color = "#000000";
-      canvas.freeDrawingBrush.width = 2;
+      if (canvas.freeDrawingBrush) {
+        canvas.freeDrawingBrush.color = "#000000";
+        canvas.freeDrawingBrush.width = 2;
+      }
 
       // Track when user draws
       canvas.on("path:created", () => {
@@ -44,7 +55,7 @@ const SignaturePad = forwardRef<SignaturePadRef, SignaturePadProps>(
       return () => {
         canvas.dispose();
       };
-    }, [width, height]);
+    }, [mounted, width, height]);
 
     useImperativeHandle(ref, () => ({
       isEmpty: () => !hasDrawn || (fabricCanvas?.getObjects().length ?? 0) === 0,

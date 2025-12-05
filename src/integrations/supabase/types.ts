@@ -208,6 +208,62 @@ export type Database = {
           },
         ]
       }
+      donor_consents: {
+        Row: {
+          access_token: string
+          consent_type: string
+          created_at: string
+          created_by: string | null
+          donor_id: string
+          id: string
+          ip_address: string | null
+          signature_data: string | null
+          signed_at: string | null
+          signed_document_path: string | null
+          status: string
+          token_expires_at: string
+          updated_at: string
+        }
+        Insert: {
+          access_token: string
+          consent_type: string
+          created_at?: string
+          created_by?: string | null
+          donor_id: string
+          id?: string
+          ip_address?: string | null
+          signature_data?: string | null
+          signed_at?: string | null
+          signed_document_path?: string | null
+          status?: string
+          token_expires_at: string
+          updated_at?: string
+        }
+        Update: {
+          access_token?: string
+          consent_type?: string
+          created_at?: string
+          created_by?: string | null
+          donor_id?: string
+          id?: string
+          ip_address?: string | null
+          signature_data?: string | null
+          signed_at?: string | null
+          signed_document_path?: string | null
+          status?: string
+          token_expires_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "donor_consents_donor_id_fkey"
+            columns: ["donor_id"]
+            isOneToOne: false
+            referencedRelation: "donors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       donor_documents: {
         Row: {
           created_at: string
