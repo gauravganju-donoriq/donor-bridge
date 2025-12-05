@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Phone, User, Calendar, Clock, AlertCircle, CheckCircle2, Mail } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -138,7 +138,7 @@ const FollowUpsDashboard = () => {
               <Phone className="h-4 w-4 text-muted-foreground" />
               <span className="text-sm text-muted-foreground">Pending Calls</span>
             </div>
-            <div className="text-2xl font-bold mt-1">{pendingCount}</div>
+            <div className="text-xl font-semibold mt-1">{pendingCount}</div>
           </CardContent>
         </Card>
         <Card>
@@ -147,7 +147,7 @@ const FollowUpsDashboard = () => {
               <Clock className="h-4 w-4 text-amber-500" />
               <span className="text-sm text-muted-foreground">Attempted</span>
             </div>
-            <div className="text-2xl font-bold mt-1">{attemptedCount}</div>
+            <div className="text-xl font-semibold mt-1">{attemptedCount}</div>
           </CardContent>
         </Card>
         <Card>
@@ -156,7 +156,7 @@ const FollowUpsDashboard = () => {
               <Mail className="h-4 w-4 text-blue-500" />
               <span className="text-sm text-muted-foreground">Email Sent</span>
             </div>
-            <div className="text-2xl font-bold mt-1">{emailSentCount}</div>
+            <div className="text-xl font-semibold mt-1">{emailSentCount}</div>
           </CardContent>
         </Card>
         <Card>
@@ -165,7 +165,7 @@ const FollowUpsDashboard = () => {
               <AlertCircle className="h-4 w-4 text-destructive" />
               <span className="text-sm text-muted-foreground">Overdue (&gt;3 days)</span>
             </div>
-            <div className="text-2xl font-bold text-destructive mt-1">{overdueCount}</div>
+            <div className="text-xl font-semibold text-destructive mt-1">{overdueCount}</div>
           </CardContent>
         </Card>
       </div>
@@ -173,20 +173,16 @@ const FollowUpsDashboard = () => {
       {/* Follow-ups Table */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Phone className="h-5 w-5" />
+          <CardTitle className="flex items-center gap-2 text-base font-medium">
+            <Phone className="h-4 w-4" />
             Pending Follow-Ups
           </CardTitle>
-          <CardDescription>
-            Mandatory post-donation follow-up calls. Contact donors within 48 hours of donation.
-          </CardDescription>
         </CardHeader>
         <CardContent>
           {followUps.length === 0 ? (
             <div className="text-center py-10 text-muted-foreground border-2 border-dashed rounded-lg">
               <CheckCircle2 className="h-8 w-8 mx-auto mb-2 text-green-500" />
-              <p className="text-sm font-medium">All caught up!</p>
-              <p className="text-sm">No pending follow-ups at this time.</p>
+              <p className="text-sm">No pending follow-ups</p>
             </div>
           ) : (
             <Table>
