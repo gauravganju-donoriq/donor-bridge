@@ -8,6 +8,7 @@ import Index from "./pages/Index";
 import PreScreenForm from "./pages/PreScreenForm";
 import Confirmation from "./pages/Confirmation";
 import NotFound from "./pages/NotFound";
+import Questionnaire from "./pages/Questionnaire";
 
 // Admin imports
 import Login from "./pages/admin/Login";
@@ -37,6 +38,7 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/apply" element={<PreScreenForm />} />
             <Route path="/confirmation" element={<Confirmation />} />
+            <Route path="/questionnaire/:token" element={<Questionnaire />} />
 
             {/* Admin Routes */}
             <Route path="/admin/login" element={<Login />} />

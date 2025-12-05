@@ -1,12 +1,38 @@
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { ClipboardList, Copy, ExternalLink, Loader2, CheckCircle2, Clock, Eye } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
+import { format } from "date-fns";
 import type { Tables } from "@/integrations/supabase/types";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import QuestionnaireForm from "@/components/questionnaire/QuestionnaireForm";
+import { HEALTH_QUESTIONS } from "@/data/healthQuestionnaireQuestions";
 
 type Donor = Tables<"donors">;
+
+interface HealthQuestionnaire {
+  id: string;
+  status: string;
+  access_token: string;
+  token_expires_at: string;
+  responses: Record<string, any>;
+  created_at: string;
+  completed_at: string | null;
+}
 
 interface DonorMedicalHistoryProps {
   donor: Donor;
@@ -16,6 +42,93 @@ interface DonorMedicalHistoryProps {
 }
 
 const DonorMedicalHistory = ({ donor, formData, setFormData, editMode }: DonorMedicalHistoryProps) => {
+  const { user } = useAuth();
+  const [questionnaires, setQuestionnaires] = useState<HealthQuestionnaire[]>([]);
+  const [loadingQuestionnaires, setLoadingQuestionnaires] = useState(true);
+  const [creatingLink, setCreatingLink] = useState(false);
+  const [newLinkDialogOpen, setNewLinkDialogOpen] = useState(false);
+  const [newLink, setNewLink] = useState("");
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [selectedQuestionnaire, setSelectedQuestionnaire] = useState<HealthQuestionnaire | null>(null);
+
+  useEffect(() => {
+    fetchQuestionnaires();
+  }, [donor.id]);
+
+  const fetchQuestionnaires = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("health_questionnaires")
+        .select("*")
+        .eq("donor_id", donor.id)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      setQuestionnaires((data || []) as unknown as HealthQuestionnaire[]);
+    } catch (err) {
+      console.error("Error fetching questionnaires:", err);
+    } finally {
+      setLoadingQuestionnaires(false);
+    }
+  };
+
+  const generateToken = () => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let token = '';
+    for (let i = 0; i < 32; i++) {
+      token += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return token;
+  };
+
+  const createQuestionnaireLink = async () => {
+    if (!user) return;
+
+    setCreatingLink(true);
+    try {
+      const token = generateToken();
+      const expiresAt = new Date();
+      expiresAt.setHours(expiresAt.getHours() + 24); // 24 hour expiry
+
+      const { error } = await supabase.from("health_questionnaires").insert({
+        donor_id: donor.id,
+        access_token: token,
+        token_expires_at: expiresAt.toISOString(),
+        created_by: user.id,
+      });
+
+      if (error) throw error;
+
+      const link = `${window.location.origin}/questionnaire/${token}`;
+      setNewLink(link);
+      setNewLinkDialogOpen(true);
+      fetchQuestionnaires();
+    } catch (err) {
+      console.error("Error creating questionnaire:", err);
+      toast.error("Failed to create questionnaire link");
+    } finally {
+      setCreatingLink(false);
+    }
+  };
+
+  const copyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(newLink);
+      toast.success("Link copied to clipboard");
+    } catch (err) {
+      toast.error("Failed to copy link");
+    }
+  };
+
+  const openLink = () => {
+    window.open(newLink, "_blank");
+  };
+
+  const viewQuestionnaire = (q: HealthQuestionnaire) => {
+    setSelectedQuestionnaire(q);
+    setViewDialogOpen(true);
+  };
+
   const updateField = (field: keyof Donor, value: unknown) => {
     setFormData({ ...formData, [field]: value });
   };
@@ -52,6 +165,12 @@ const DonorMedicalHistory = ({ donor, formData, setFormData, editMode }: DonorMe
       <p className="text-sm font-medium">{value || "—"}</p>
     </div>
   );
+
+  const getQuestionnaireStats = (responses: Record<string, any>) => {
+    const answered = Object.keys(responses).length;
+    const yesCount = Object.values(responses).filter((r: any) => r.answer === true).length;
+    return { answered, yesCount };
+  };
 
   return (
     <div className="grid gap-4 md:grid-cols-2">
@@ -184,17 +303,143 @@ const DonorMedicalHistory = ({ donor, formData, setFormData, editMode }: DonorMe
         </CardContent>
       </Card>
 
-      {/* Medical Notes */}
+      {/* Health Questionnaires */}
       <Card className="md:col-span-2">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base font-semibold">Medical Notes</CardTitle>
+        <CardHeader className="pb-3 flex flex-row items-center justify-between">
+          <CardTitle className="text-base font-semibold">Health Questionnaires</CardTitle>
+          <Button size="sm" onClick={createQuestionnaireLink} disabled={creatingLink}>
+            {creatingLink ? (
+              <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+            ) : (
+              <ClipboardList className="h-4 w-4 mr-1" />
+            )}
+            New Questionnaire
+          </Button>
         </CardHeader>
         <CardContent>
-          <div className="text-sm text-muted-foreground text-center py-8 border-2 border-dashed rounded-lg">
-            Medical history notes will be available in a future update.
-          </div>
+          {loadingQuestionnaires ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : questionnaires.length === 0 ? (
+            <div className="text-sm text-muted-foreground text-center py-8 border-2 border-dashed rounded-lg">
+              <ClipboardList className="h-8 w-8 mx-auto mb-2 opacity-50" />
+              <p>No health questionnaires yet.</p>
+              <p className="text-xs mt-1">Click "New Questionnaire" to create an iPad-friendly link.</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {questionnaires.map((q) => {
+                const stats = getQuestionnaireStats(q.responses || {});
+                const isExpired = new Date(q.token_expires_at) < new Date();
+                
+                return (
+                  <div
+                    key={q.id}
+                    className="flex items-center justify-between p-3 border rounded-lg bg-muted/30"
+                  >
+                    <div className="flex items-center gap-3">
+                      {q.status === "completed" ? (
+                        <CheckCircle2 className="h-5 w-5 text-green-500" />
+                      ) : (
+                        <Clock className="h-5 w-5 text-muted-foreground" />
+                      )}
+                      <div>
+                        <p className="text-sm font-medium">
+                          {format(new Date(q.created_at), "MMM d, yyyy h:mm a")}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {q.status === "completed" ? (
+                            <>Completed • {stats.answered}/{HEALTH_QUESTIONS.length} answered • {stats.yesCount} "Yes" responses</>
+                          ) : q.status === "in_progress" ? (
+                            <>In Progress • {stats.answered}/{HEALTH_QUESTIONS.length} answered</>
+                          ) : isExpired ? (
+                            <span className="text-destructive">Link expired</span>
+                          ) : (
+                            <>Pending • Expires {format(new Date(q.token_expires_at), "MMM d, h:mm a")}</>
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      {q.status === "completed" && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => viewQuestionnaire(q)}
+                        >
+                          <Eye className="h-4 w-4 mr-1" />
+                          View
+                        </Button>
+                      )}
+                      {!isExpired && q.status !== "completed" && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            const link = `${window.location.origin}/questionnaire/${q.access_token}`;
+                            navigator.clipboard.writeText(link);
+                            toast.success("Link copied");
+                          }}
+                        >
+                          <Copy className="h-4 w-4 mr-1" />
+                          Copy Link
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </CardContent>
       </Card>
+
+      {/* New Link Dialog */}
+      <Dialog open={newLinkDialogOpen} onOpenChange={setNewLinkDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Questionnaire Link Created</DialogTitle>
+            <DialogDescription>
+              Share this link on the iPad to fill out the health questionnaire. The link expires in 24 hours.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="p-3 bg-muted rounded-lg font-mono text-sm break-all">
+              {newLink}
+            </div>
+            <div className="flex gap-2">
+              <Button className="flex-1" onClick={copyLink}>
+                <Copy className="h-4 w-4 mr-1" />
+                Copy Link
+              </Button>
+              <Button variant="outline" onClick={openLink}>
+                <ExternalLink className="h-4 w-4 mr-1" />
+                Open
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Questionnaire Dialog */}
+      <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Health Questionnaire Responses</DialogTitle>
+            <DialogDescription>
+              Completed on {selectedQuestionnaire?.completed_at && format(new Date(selectedQuestionnaire.completed_at), "MMMM d, yyyy 'at' h:mm a")}
+            </DialogDescription>
+          </DialogHeader>
+          {selectedQuestionnaire && (
+            <QuestionnaireForm
+              initialResponses={selectedQuestionnaire.responses || {}}
+              onSave={async () => {}}
+              readOnly
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
