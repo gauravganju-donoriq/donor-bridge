@@ -6,10 +6,7 @@ const Users = () => {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Users</h1>
-          <p className="text-muted-foreground">Manage admin and staff accounts</p>
-        </div>
+        <h1 className="text-lg font-semibold">Users</h1>
         <Button>
           <Plus className="mr-2 h-4 w-4" />
           Add User
@@ -17,15 +14,6 @@ const Users = () => {
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <UserCog className="h-5 w-5" />
-            User Management
-          </CardTitle>
-          <CardDescription>
-            Add, edit, and manage user roles and permissions
-          </CardDescription>
-        </CardHeader>
         <CardContent>
           <div className="flex items-center justify-center h-64 border-2 border-dashed rounded-lg">
             <div className="text-center">

@@ -197,10 +197,6 @@ const Dashboard = () => {
   if (loading) {
     return (
       <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold">Dashboard</h1>
-          <p className="text-muted-foreground">Loading metrics...</p>
-        </div>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {[1, 2, 3, 4].map((i) => (
             <Card key={i} className="animate-pulse">
@@ -208,7 +204,7 @@ const Dashboard = () => {
                 <div className="h-4 bg-muted rounded w-24" />
               </CardHeader>
               <CardContent>
-                <div className="h-8 bg-muted rounded w-16" />
+                <div className="h-6 bg-muted rounded w-16" />
               </CardContent>
             </Card>
           ))}
@@ -219,14 +215,6 @@ const Dashboard = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold">Dashboard</h1>
-        <p className="text-muted-foreground">
-          Overview of donor management activities
-        </p>
-      </div>
-
       {/* Metrics Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card
@@ -240,7 +228,7 @@ const Dashboard = () => {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{metrics.totalDonors}</div>
+            <div className="text-xl font-semibold">{metrics.totalDonors}</div>
             <p className="text-xs text-muted-foreground mt-1">
               {metrics.eligibleDonors} eligible
             </p>
@@ -258,7 +246,7 @@ const Dashboard = () => {
             <ClipboardCheck className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{metrics.pendingApprovals}</div>
+            <div className="text-xl font-semibold">{metrics.pendingApprovals}</div>
             {metrics.pendingApprovals > 0 && (
               <Badge variant="destructive" className="mt-1 text-xs">
                 Needs attention
@@ -278,7 +266,7 @@ const Dashboard = () => {
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{metrics.upcomingAppointments}</div>
+            <div className="text-xl font-semibold">{metrics.upcomingAppointments}</div>
             <p className="text-xs text-muted-foreground mt-1">Scheduled</p>
           </CardContent>
         </Card>
@@ -291,7 +279,7 @@ const Dashboard = () => {
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{metrics.pendingReviewDonors}</div>
+            <div className="text-xl font-semibold">{metrics.pendingReviewDonors}</div>
             <p className="text-xs text-muted-foreground mt-1">Donors awaiting review</p>
           </CardContent>
         </Card>
@@ -301,11 +289,8 @@ const Dashboard = () => {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
         {/* Weekly Activity Chart */}
         <Card className="lg:col-span-4">
-          <CardHeader>
-            <CardTitle>Weekly Activity</CardTitle>
-            <CardDescription>
-              Submissions and appointments over the last 7 days
-            </CardDescription>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-medium">Weekly Activity</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="h-[300px]">
@@ -341,9 +326,8 @@ const Dashboard = () => {
 
         {/* Donor Status Pie Chart */}
         <Card className="lg:col-span-3">
-          <CardHeader>
-            <CardTitle>Donor Eligibility</CardTitle>
-            <CardDescription>Distribution by eligibility status</CardDescription>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-medium">Donor Eligibility</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="h-[300px]">
@@ -392,9 +376,8 @@ const Dashboard = () => {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {/* Recent Activity */}
         <Card>
-          <CardHeader>
-            <CardTitle>Recent Activity</CardTitle>
-            <CardDescription>Latest actions in the system</CardDescription>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-medium">Recent Activity</CardTitle>
           </CardHeader>
           <CardContent>
             {recentActivity.length > 0 ? (
@@ -432,12 +415,11 @@ const Dashboard = () => {
 
         {/* Upcoming Eligible Donors */}
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <CalendarClock className="h-5 w-5 text-green-500" />
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-medium flex items-center gap-2">
+              <CalendarClock className="h-4 w-4 text-green-500" />
               Becoming Eligible Soon
             </CardTitle>
-            <CardDescription>Donors eligible within 2 weeks</CardDescription>
           </CardHeader>
           <CardContent>
             {upcomingEligible.length > 0 ? (
@@ -473,9 +455,8 @@ const Dashboard = () => {
 
         {/* Quick Actions */}
         <Card>
-          <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
-            <CardDescription>Common tasks and shortcuts</CardDescription>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-medium">Quick Actions</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <Button
