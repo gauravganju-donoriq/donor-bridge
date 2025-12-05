@@ -318,8 +318,10 @@ export type Database = {
           home_phone: string | null
           id: string
           ineligibility_reason: string | null
+          last_donation_date: string | null
           last_name: string
           middle_initial: string | null
+          next_eligible_date: string | null
           postal_code: string | null
           pronouns: string | null
           social_security_encrypted: string | null
@@ -353,8 +355,10 @@ export type Database = {
           home_phone?: string | null
           id?: string
           ineligibility_reason?: string | null
+          last_donation_date?: string | null
           last_name: string
           middle_initial?: string | null
+          next_eligible_date?: string | null
           postal_code?: string | null
           pronouns?: string | null
           social_security_encrypted?: string | null
@@ -388,8 +392,10 @@ export type Database = {
           home_phone?: string | null
           id?: string
           ineligibility_reason?: string | null
+          last_donation_date?: string | null
           last_name?: string
           middle_initial?: string | null
+          next_eligible_date?: string | null
           postal_code?: string | null
           pronouns?: string | null
           social_security_encrypted?: string | null
@@ -898,6 +904,7 @@ export type Database = {
         Returns: boolean
       }
       is_admin_or_staff: { Args: { _user_id: string }; Returns: boolean }
+      restore_donor_eligibility: { Args: never; Returns: number }
     }
     Enums: {
       app_role: "admin" | "staff" | "readonly"

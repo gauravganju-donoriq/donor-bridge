@@ -110,10 +110,16 @@ const DonorDetail = () => {
     setEditMode(false);
   };
 
-  const getEligibilityBadge = (status: string | null) => {
+  const getEligibilityBadge = (status: string | null, nextEligibleDate?: string | null) => {
     switch (status) {
       case "eligible":
         return <Badge className="bg-green-500/10 text-green-600">Eligible</Badge>;
+      case "temporarily_deferred":
+        return (
+          <Badge className="bg-yellow-500/10 text-yellow-600">
+            Deferred{nextEligibleDate && ` until ${format(new Date(nextEligibleDate), "MMM d, yyyy")}`}
+          </Badge>
+        );
       case "ineligible":
         return <Badge variant="destructive">Ineligible</Badge>;
       case "pending_review":
@@ -159,7 +165,7 @@ const DonorDetail = () => {
               <h1 className="text-2xl font-bold">
                 {donor.first_name} {donor.last_name}
               </h1>
-              {getEligibilityBadge(donor.eligibility_status)}
+              {getEligibilityBadge(donor.eligibility_status, donor.next_eligible_date)}
             </div>
             <div className="flex items-center gap-2 text-muted-foreground mt-1">
               <span className="font-mono text-sm">{donor.donor_id}</span>
