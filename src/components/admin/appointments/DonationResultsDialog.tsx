@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { FlaskConical } from "lucide-react";
+import { FlaskConical, X } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -70,6 +70,22 @@ interface FormData {
   departure_time: string;
 }
 
+const initialFormData: FormData = {
+  volume_ml: "",
+  clots_vol_ml: "",
+  final_vol_ml: "",
+  cell_count: "",
+  lot_number: "",
+  lot_number_2: "",
+  lot_number_3: "",
+  lot_number_4: "",
+  doctor_id: "",
+  doctor_comments: "",
+  lab_tech_id: "",
+  exam_room_time: "",
+  departure_time: "",
+};
+
 const DonationResultsDialog = ({
   open,
   onOpenChange,
@@ -82,21 +98,7 @@ const DonationResultsDialog = ({
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
   const [staffMembers, setStaffMembers] = useState<StaffMember[]>([]);
-  const [formData, setFormData] = useState<FormData>({
-    volume_ml: "",
-    clots_vol_ml: "",
-    final_vol_ml: "",
-    cell_count: "",
-    lot_number: "",
-    lot_number_2: "",
-    lot_number_3: "",
-    lot_number_4: "",
-    doctor_id: "",
-    doctor_comments: "",
-    lab_tech_id: "",
-    exam_room_time: "",
-    departure_time: "",
-  });
+  const [formData, setFormData] = useState<FormData>(initialFormData);
 
   const isEditMode = !!existingResult;
 
@@ -142,21 +144,7 @@ const DonationResultsDialog = ({
   };
 
   const resetForm = () => {
-    setFormData({
-      volume_ml: "",
-      clots_vol_ml: "",
-      final_vol_ml: "",
-      cell_count: "",
-      lot_number: "",
-      lot_number_2: "",
-      lot_number_3: "",
-      lot_number_4: "",
-      doctor_id: "",
-      doctor_comments: "",
-      lab_tech_id: "",
-      exam_room_time: "",
-      departure_time: "",
-    });
+    setFormData(initialFormData);
   };
 
   const handleSubmit = async () => {
@@ -421,33 +409,62 @@ const DonationResultsDialog = ({
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="exam_room_time">Exam Room Time</Label>
-                <Input
-                  id="exam_room_time"
-                  type="time"
-                  value={formData.exam_room_time}
-                  onChange={(e) => setFormData({ ...formData, exam_room_time: e.target.value })}
-                />
+                <div className="flex gap-2">
+                  <Input
+                    id="exam_room_time"
+                    type="time"
+                    value={formData.exam_room_time}
+                    onChange={(e) => setFormData({ ...formData, exam_room_time: e.target.value })}
+                    className="flex-1"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setFormData({ ...formData, exam_room_time: "" })}
+                    title="Reset Time"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="departure_time">Departure Time</Label>
-                <Input
-                  id="departure_time"
-                  type="time"
-                  value={formData.departure_time}
-                  onChange={(e) => setFormData({ ...formData, departure_time: e.target.value })}
-                />
+                <div className="flex gap-2">
+                  <Input
+                    id="departure_time"
+                    type="time"
+                    value={formData.departure_time}
+                    onChange={(e) => setFormData({ ...formData, departure_time: e.target.value })}
+                    className="flex-1"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setFormData({ ...formData, departure_time: "" })}
+                    title="Reset Time"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
+        <DialogFooter className="gap-2 sm:gap-0">
+          <Button variant="outline" onClick={resetForm} type="button">
+            Clear
           </Button>
-          <Button onClick={handleSubmit} disabled={saving}>
-            {saving ? "Saving..." : isEditMode ? "Update Results" : "Save Results & Complete"}
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSubmit} disabled={saving}>
+              {saving ? "Saving..." : isEditMode ? "Update Results" : "Save Results & Complete"}
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>

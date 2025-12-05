@@ -1,19 +1,22 @@
 import { useState, useEffect } from "react";
-import { Phone, Mail, CheckCircle, AlertCircle, Clock, Pencil } from "lucide-react";
+import { Phone, Mail, CheckCircle, AlertCircle, Clock, Pencil, Plus, ChevronDown, ChevronRight, Check, X } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { format, parseISO } from "date-fns";
+import { useToast } from "@/hooks/use-toast";
 import FollowUpCompleteDialog, { type ExistingFollowUp } from "@/components/admin/appointments/FollowUpCompleteDialog";
 
 interface DonorFollowUpsProps {
@@ -52,14 +55,25 @@ interface FollowUp {
   };
 }
 
+interface AvailableAppointment {
+  id: string;
+  appointment_date: string;
+  donor_letter: string | null;
+}
+
 const DonorFollowUps = ({ donorId, donorName }: DonorFollowUpsProps) => {
+  const { toast } = useToast();
   const [followUps, setFollowUps] = useState<FollowUp[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedFollowUp, setSelectedFollowUp] = useState<FollowUp | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [availableAppointments, setAvailableAppointments] = useState<AvailableAppointment[]>([]);
+  const [addPopoverOpen, setAddPopoverOpen] = useState(false);
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     fetchFollowUps();
+    fetchAvailableAppointments();
   }, [donorId]);
 
   const fetchFollowUps = async () => {
@@ -83,6 +97,40 @@ const DonorFollowUps = ({ donorId, donorName }: DonorFollowUpsProps) => {
     }
   };
 
+  const fetchAvailableAppointments = async () => {
+    try {
+      // Get completed donation appointments
+      const { data: appointments, error: apptError } = await supabase
+        .from("appointments")
+        .select("id, appointment_date, donor_letter")
+        .eq("donor_id", donorId)
+        .eq("appointment_type", "donation")
+        .eq("status", "completed")
+        .order("appointment_date", { ascending: false });
+
+      if (apptError) throw apptError;
+
+      if (!appointments || appointments.length === 0) {
+        setAvailableAppointments([]);
+        return;
+      }
+
+      // Get existing follow-ups
+      const { data: existingFollowUps, error: followUpsError } = await supabase
+        .from("follow_ups")
+        .select("appointment_id")
+        .in("appointment_id", appointments.map(a => a.id));
+
+      if (followUpsError) throw followUpsError;
+
+      const existingIds = new Set(existingFollowUps?.map(f => f.appointment_id) || []);
+      const available = appointments.filter(a => !existingIds.has(a.id));
+      setAvailableAppointments(available);
+    } catch (error) {
+      console.error("Error fetching available appointments:", error);
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "completed":
@@ -103,6 +151,77 @@ const DonorFollowUps = ({ donorId, donorName }: DonorFollowUpsProps) => {
   const handleOpenDialog = (followUp: FollowUp) => {
     setSelectedFollowUp(followUp);
     setDialogOpen(true);
+  };
+
+  const handleAddFollowUp = async (appointmentId: string) => {
+    try {
+      // Create new follow-up record
+      const { data, error } = await supabase
+        .from("follow_ups")
+        .insert({
+          appointment_id: appointmentId,
+          donor_id: donorId,
+          status: "pending",
+        })
+        .select(`
+          *,
+          appointment:appointments(appointment_date, donor_letter),
+          completed_by_profile:profiles!follow_ups_completed_by_fkey(full_name)
+        `)
+        .single();
+
+      if (error) throw error;
+
+      setAddPopoverOpen(false);
+      setSelectedFollowUp(data as FollowUp);
+      setDialogOpen(true);
+      
+      // Refresh lists
+      fetchFollowUps();
+      fetchAvailableAppointments();
+    } catch (error) {
+      console.error("Error creating follow-up:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create follow-up.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const toggleExpanded = (id: string) => {
+    setExpandedIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  };
+
+  const handleSuccess = () => {
+    fetchFollowUps();
+    fetchAvailableAppointments();
+  };
+
+  const YesNoDisplay = ({ value, details, label }: { value: boolean | null; details?: string | null; label: string }) => {
+    if (value === null) return null;
+    return (
+      <div className="flex items-start gap-2 py-1">
+        <div className="flex items-center gap-1.5 min-w-[140px]">
+          {value ? (
+            <Check className="h-4 w-4 text-green-600" />
+          ) : (
+            <X className="h-4 w-4 text-muted-foreground" />
+          )}
+          <span className="text-sm">{label}</span>
+        </div>
+        <span className="text-sm font-medium">{value ? "Yes" : "No"}</span>
+        {details && <span className="text-sm text-muted-foreground">— {details}</span>}
+      </div>
+    );
   };
 
   const completedCount = followUps.filter(f => f.status === "completed").length;
@@ -159,12 +278,51 @@ const DonorFollowUps = ({ donorId, donorName }: DonorFollowUpsProps) => {
           </Card>
         </div>
 
-        {/* Follow-Ups Table */}
+        {/* Follow-Ups List with Expandable Details */}
         <Card>
-          <CardHeader className="pb-3">
+          <CardHeader className="pb-3 flex flex-row items-center justify-between">
             <CardTitle className="text-base font-semibold">
               Follow-Up History ({followUps.length})
             </CardTitle>
+            <Popover open={addPopoverOpen} onOpenChange={setAddPopoverOpen}>
+              <PopoverTrigger asChild>
+                <Button size="sm" disabled={availableAppointments.length === 0}>
+                  <Plus className="h-4 w-4 mr-1" />
+                  Add Follow-Up
+                  <ChevronDown className="h-4 w-4 ml-1" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-72 p-2" align="end">
+                <div className="text-sm font-medium mb-2 px-2">Select Completed Appointment</div>
+                {availableAppointments.length === 0 ? (
+                  <div className="text-sm text-muted-foreground px-2 py-4 text-center">
+                    No completed appointments without follow-ups
+                  </div>
+                ) : (
+                  <div className="space-y-1">
+                    {availableAppointments.map((appt) => (
+                      <Button
+                        key={appt.id}
+                        variant="ghost"
+                        className="w-full justify-start text-left h-auto py-2"
+                        onClick={() => handleAddFollowUp(appt.id)}
+                      >
+                        <div>
+                          <div className="font-medium">
+                            {format(parseISO(appt.appointment_date), "MMM d, yyyy")}
+                          </div>
+                          {appt.donor_letter && (
+                            <div className="text-xs text-muted-foreground">
+                              Letter: {appt.donor_letter}
+                            </div>
+                          )}
+                        </div>
+                      </Button>
+                    ))}
+                  </div>
+                )}
+              </PopoverContent>
+            </Popover>
           </CardHeader>
           <CardContent>
             {followUps.length === 0 ? (
@@ -174,129 +332,159 @@ const DonorFollowUps = ({ donorId, donorName }: DonorFollowUpsProps) => {
                 <p className="text-sm">Follow-ups will appear here after donations are completed.</p>
               </div>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Letter</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Pain Level</TableHead>
-                    <TableHead>Ratings</TableHead>
-                    <TableHead>Donate Again?</TableHead>
-                    <TableHead className="w-[100px]">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {followUps.map((followUp) => (
-                    <TableRow key={followUp.id}>
-                      <TableCell>
-                        <span className="text-sm">
-                          {followUp.appointment?.appointment_date
-                            ? format(parseISO(followUp.appointment.appointment_date), "MMM d, yyyy")
-                            : format(parseISO(followUp.created_at), "MMM d, yyyy")}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        {followUp.appointment?.donor_letter ? (
-                          <Badge variant="outline">{followUp.appointment.donor_letter}</Badge>
-                        ) : "—"}
-                      </TableCell>
-                      <TableCell>{getStatusBadge(followUp.status)}</TableCell>
-                      <TableCell>
-                        {followUp.pain_level ? (
-                          <div className="space-y-0.5">
-                            <div className="text-sm">Procedure: {followUp.pain_level}/10</div>
-                            {followUp.current_pain_level && (
-                              <div className="text-xs text-muted-foreground">
-                                Current: {followUp.current_pain_level}/10
-                              </div>
-                            )}
-                          </div>
-                        ) : "—"}
-                      </TableCell>
-                      <TableCell>
-                        {(followUp.staff_rating || followUp.nurse_rating || followUp.doctor_rating) ? (
-                          <div className="text-xs space-y-0.5">
-                            {followUp.staff_rating && <div>Staff: {followUp.staff_rating}/10</div>}
-                            {followUp.nurse_rating && <div>Nurse: {followUp.nurse_rating}/10</div>}
-                            {followUp.doctor_rating && <div>Doctor: {followUp.doctor_rating}/10</div>}
-                          </div>
-                        ) : "—"}
-                      </TableCell>
-                      <TableCell>
-                        {followUp.would_donate_again === true && (
-                          <Badge className="bg-green-500/10 text-green-600">Yes</Badge>
-                        )}
-                        {followUp.would_donate_again === false && (
-                          <Badge variant="destructive">No</Badge>
-                        )}
-                        {followUp.would_donate_again === null && "—"}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-1">
-                          {followUp.status === "completed" ? (
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => handleOpenDialog(followUp)}
-                            >
-                              <Pencil className="h-4 w-4 mr-1" />
-                              Edit
-                            </Button>
-                          ) : (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleOpenDialog(followUp)}
-                            >
-                              Complete
-                            </Button>
+              <div className="space-y-2">
+                {followUps.map((followUp) => {
+                  const isExpanded = expandedIds.has(followUp.id);
+                  const hasDetails = followUp.status === "completed" && (
+                    followUp.took_pain_medication !== null ||
+                    followUp.checked_aspiration_sites !== null ||
+                    followUp.signs_of_infection !== null ||
+                    followUp.unusual_symptoms !== null ||
+                    followUp.procedure_feedback ||
+                    followUp.notes
+                  );
+
+                  return (
+                    <Collapsible
+                      key={followUp.id}
+                      open={isExpanded}
+                      onOpenChange={() => hasDetails && toggleExpanded(followUp.id)}
+                    >
+                      <div className="border rounded-lg">
+                        {/* Summary Row */}
+                        <div className="p-3 flex items-center gap-4">
+                          {hasDetails && (
+                            <CollapsibleTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0">
+                                {isExpanded ? (
+                                  <ChevronDown className="h-4 w-4" />
+                                ) : (
+                                  <ChevronRight className="h-4 w-4" />
+                                )}
+                              </Button>
+                            </CollapsibleTrigger>
                           )}
+                          {!hasDetails && <div className="w-6" />}
+                          
+                          <div className="flex-1 grid grid-cols-6 gap-4 items-center">
+                            <div>
+                              <span className="text-sm font-medium">
+                                {followUp.appointment?.appointment_date
+                                  ? format(parseISO(followUp.appointment.appointment_date), "MMM d, yyyy")
+                                  : format(parseISO(followUp.created_at), "MMM d, yyyy")}
+                              </span>
+                              {followUp.appointment?.donor_letter && (
+                                <Badge variant="outline" className="ml-2">{followUp.appointment.donor_letter}</Badge>
+                              )}
+                            </div>
+                            <div>{getStatusBadge(followUp.status)}</div>
+                            <div className="text-sm">
+                              {followUp.pain_level ? (
+                                <span>Pain: {followUp.pain_level}→{followUp.current_pain_level || "?"}</span>
+                              ) : "—"}
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                              {(followUp.staff_rating || followUp.nurse_rating || followUp.doctor_rating) ? (
+                                <span>
+                                  {followUp.staff_rating && `S:${followUp.staff_rating}`}
+                                  {followUp.nurse_rating && ` N:${followUp.nurse_rating}`}
+                                  {followUp.doctor_rating && ` D:${followUp.doctor_rating}`}
+                                </span>
+                              ) : "—"}
+                            </div>
+                            <div>
+                              {followUp.would_donate_again === true && (
+                                <Badge className="bg-green-500/10 text-green-600">Would Donate</Badge>
+                              )}
+                              {followUp.would_donate_again === false && (
+                                <Badge variant="destructive">Won't Donate</Badge>
+                              )}
+                            </div>
+                            <div className="text-right">
+                              {followUp.status === "completed" ? (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => handleOpenDialog(followUp)}
+                                >
+                                  <Pencil className="h-4 w-4 mr-1" />
+                                  Edit
+                                </Button>
+                              ) : (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleOpenDialog(followUp)}
+                                >
+                                  Complete
+                                </Button>
+                              )}
+                            </div>
+                          </div>
                         </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+
+                        {/* Expandable Details */}
+                        <CollapsibleContent>
+                          <div className="px-3 pb-3 pt-0 ml-10 border-t">
+                            <div className="pt-3 space-y-1">
+                              <div className="text-xs font-medium text-muted-foreground mb-2">QUESTIONNAIRE DETAILS</div>
+                              
+                              <YesNoDisplay 
+                                value={followUp.took_pain_medication} 
+                                details={followUp.pain_medication_details}
+                                label="Pain medication?"
+                              />
+                              <YesNoDisplay 
+                                value={followUp.checked_aspiration_sites} 
+                                details={followUp.aspiration_sites_notes}
+                                label="Checked sites?"
+                              />
+                              <YesNoDisplay 
+                                value={followUp.signs_of_infection} 
+                                details={followUp.infection_details}
+                                label="Signs of infection?"
+                              />
+                              <YesNoDisplay 
+                                value={followUp.unusual_symptoms} 
+                                details={followUp.symptoms_details}
+                                label="Unusual symptoms?"
+                              />
+                              <YesNoDisplay 
+                                value={followUp.would_donate_again} 
+                                label="Would donate again?"
+                              />
+
+                              {followUp.procedure_feedback && (
+                                <div className="pt-2">
+                                  <div className="text-sm text-muted-foreground">Procedure Feedback:</div>
+                                  <div className="text-sm">{followUp.procedure_feedback}</div>
+                                </div>
+                              )}
+
+                              {followUp.notes && (
+                                <div className="pt-2">
+                                  <div className="text-sm text-muted-foreground">Notes:</div>
+                                  <div className="text-sm">{followUp.notes}</div>
+                                </div>
+                              )}
+
+                              {followUp.completed_by_profile?.full_name && (
+                                <div className="pt-2 text-xs text-muted-foreground">
+                                  Completed by: {followUp.completed_by_profile.full_name}
+                                  {followUp.completed_at && ` on ${format(parseISO(followUp.completed_at), "MMM d, yyyy")}`}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </CollapsibleContent>
+                      </div>
+                    </Collapsible>
+                  );
+                })}
+              </div>
             )}
           </CardContent>
         </Card>
-
-        {/* Feedback Section */}
-        {followUps.some(f => f.procedure_feedback || f.notes) && (
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base font-semibold">Feedback & Notes</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {followUps.filter(f => f.procedure_feedback || f.notes).map((followUp) => (
-                  <div key={followUp.id} className="p-3 bg-muted/50 rounded-lg">
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
-                      <span>
-                        {followUp.appointment?.appointment_date
-                          ? format(parseISO(followUp.appointment.appointment_date), "MMM d, yyyy")
-                          : format(parseISO(followUp.created_at), "MMM d, yyyy")}
-                      </span>
-                      {followUp.completed_by_profile?.full_name && (
-                        <>
-                          <span>•</span>
-                          <span>Completed by: {followUp.completed_by_profile.full_name}</span>
-                        </>
-                      )}
-                    </div>
-                    {followUp.procedure_feedback && (
-                      <p className="text-sm mb-1"><strong>Feedback:</strong> {followUp.procedure_feedback}</p>
-                    )}
-                    {followUp.notes && (
-                      <p className="text-sm text-muted-foreground"><strong>Notes:</strong> {followUp.notes}</p>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
       </div>
 
       {selectedFollowUp && (
@@ -306,7 +494,7 @@ const DonorFollowUps = ({ donorId, donorName }: DonorFollowUpsProps) => {
           followUpId={selectedFollowUp.id}
           donorName={donorName}
           existingFollowUp={selectedFollowUp as ExistingFollowUp}
-          onSuccess={fetchFollowUps}
+          onSuccess={handleSuccess}
         />
       )}
     </>
