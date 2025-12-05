@@ -9,7 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import type { Tables } from "@/integrations/supabase/types";
-import { differenceInYears, format } from "date-fns";
+import { differenceInYears, differenceInDays, format } from "date-fns";
 
 // Tab components
 import DonorPersonalInfo from "@/components/admin/donor-detail/DonorPersonalInfo";
@@ -112,16 +112,12 @@ const DonorDetail = () => {
     setEditMode(false);
   };
 
-  const getEligibilityBadge = (status: string | null, nextEligibleDate?: string | null) => {
+  const getEligibilityBadge = (status: string | null) => {
     switch (status) {
       case "eligible":
         return <Badge className="bg-green-500/10 text-green-600">Eligible</Badge>;
       case "temporarily_deferred":
-        return (
-          <Badge className="bg-yellow-500/10 text-yellow-600">
-            Deferred{nextEligibleDate && ` until ${format(new Date(nextEligibleDate), "MMM d, yyyy")}`}
-          </Badge>
-        );
+        return <Badge className="bg-yellow-500/10 text-yellow-600">Temporarily Deferred</Badge>;
       case "ineligible":
         return <Badge variant="destructive">Ineligible</Badge>;
       case "pending_review":
@@ -129,6 +125,41 @@ const DonorDetail = () => {
       default:
         return <Badge variant="outline">Unknown</Badge>;
     }
+  };
+
+  const getEligibilityCountdown = () => {
+    const status = donor?.eligibility_status as string;
+    if (status !== "temporarily_deferred" || !donor?.next_eligible_date) {
+      return null;
+    }
+    
+    const today = new Date();
+    const eligibleDate = new Date(donor.next_eligible_date);
+    const daysRemaining = differenceInDays(eligibleDate, today);
+    
+    if (daysRemaining <= 0) {
+      return (
+        <div className="flex items-center gap-2 text-sm text-green-600 bg-green-500/10 px-3 py-1.5 rounded-md">
+          <Clock className="h-4 w-4" />
+          <span>Eligible now - pending system update</span>
+        </div>
+      );
+    }
+    
+    const weeks = Math.floor(daysRemaining / 7);
+    const days = daysRemaining % 7;
+    
+    return (
+      <div className="flex items-center gap-2 text-sm text-yellow-600 bg-yellow-500/10 px-3 py-1.5 rounded-md">
+        <Clock className="h-4 w-4" />
+        <span>
+          {weeks > 0 && `${weeks}w `}{days}d until eligible
+          <span className="text-muted-foreground ml-1">
+            ({format(eligibleDate, "MMM d, yyyy")})
+          </span>
+        </span>
+      </div>
+    );
   };
 
   if (loading) {
@@ -167,7 +198,7 @@ const DonorDetail = () => {
               <h1 className="text-2xl font-bold">
                 {donor.first_name} {donor.last_name}
               </h1>
-              {getEligibilityBadge(donor.eligibility_status, donor.next_eligible_date)}
+              {getEligibilityBadge(donor.eligibility_status)}
             </div>
             <div className="flex items-center gap-2 text-muted-foreground mt-1">
               <span className="font-mono text-sm">{donor.donor_id}</span>
@@ -176,6 +207,7 @@ const DonorDetail = () => {
               <span>•</span>
               <span className="capitalize">{donor.assigned_sex}</span>
             </div>
+            {getEligibilityCountdown()}
           </div>
         </div>
         <div className="flex items-center gap-2">
