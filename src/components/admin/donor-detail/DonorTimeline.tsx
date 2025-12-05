@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Calendar, MessageSquare, UserPlus, Edit, CheckCircle, XCircle, Clock } from "lucide-react";
+import { Calendar, MessageSquare, UserPlus, Edit, CheckCircle, XCircle, Clock, ShieldCheck, ShieldAlert, ShieldX } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -8,7 +8,7 @@ import { format, formatDistanceToNow } from "date-fns";
 
 interface TimelineEvent {
   id: string;
-  type: "note" | "appointment" | "created" | "status_change";
+  type: "note" | "appointment" | "created" | "status_change" | "eligibility_change";
   title: string;
   description?: string;
   timestamp: string;
@@ -110,13 +110,34 @@ const DonorTimeline = ({ donorId, donorCreatedAt }: DonorTimelineProps) => {
 
       // Add activity logs
       logs?.forEach((log) => {
+        const isEligibilityChange = log.action === "eligibility_changed";
+        const details = log.details as Record<string, unknown> | null;
+        
+        let title = log.action;
+        let description: string | undefined;
+        
+        if (isEligibilityChange && details) {
+          const fromStatus = formatStatus(details.from_status as string);
+          const toStatus = formatStatus(details.to_status as string);
+          title = `Eligibility: ${fromStatus} → ${toStatus}`;
+          
+          if (details.next_eligible_date) {
+            description = `Next eligible: ${format(new Date(details.next_eligible_date as string), "MMM d, yyyy")}`;
+          } else if (details.ineligibility_reason) {
+            description = `Reason: ${details.ineligibility_reason}`;
+          }
+        } else if (typeof details === "object") {
+          description = JSON.stringify(details);
+        }
+        
         timelineEvents.push({
           id: `log-${log.id}`,
-          type: "status_change",
-          title: log.action,
-          description: typeof log.details === "object" ? JSON.stringify(log.details) : undefined,
+          type: isEligibilityChange ? "eligibility_change" : "status_change",
+          title,
+          description,
           timestamp: log.created_at || "",
           author: log.user_id ? profileMap.get(log.user_id) : undefined,
+          metadata: details || undefined,
         });
       });
 
@@ -131,6 +152,16 @@ const DonorTimeline = ({ donorId, donorCreatedAt }: DonorTimelineProps) => {
     }
   };
 
+  const formatStatus = (status: string): string => {
+    const statusLabels: Record<string, string> = {
+      eligible: "Eligible",
+      temporarily_deferred: "Temporarily Deferred",
+      ineligible: "Ineligible",
+      pending_review: "Pending Review",
+    };
+    return statusLabels[status] || status;
+  };
+
   const getEventIcon = (type: TimelineEvent["type"], metadata?: Record<string, unknown>) => {
     switch (type) {
       case "note":
@@ -142,6 +173,11 @@ const DonorTimeline = ({ donorId, donorCreatedAt }: DonorTimelineProps) => {
         return <Calendar className="h-4 w-4" />;
       case "created":
         return <UserPlus className="h-4 w-4" />;
+      case "eligibility_change":
+        const toStatus = metadata?.to_status as string;
+        if (toStatus === "eligible") return <ShieldCheck className="h-4 w-4" />;
+        if (toStatus === "ineligible") return <ShieldX className="h-4 w-4" />;
+        return <ShieldAlert className="h-4 w-4" />;
       case "status_change":
         return <Edit className="h-4 w-4" />;
       default:
@@ -154,12 +190,17 @@ const DonorTimeline = ({ donorId, donorCreatedAt }: DonorTimelineProps) => {
       case "note":
         return "bg-blue-500/10 text-blue-600 border-blue-200";
       case "appointment":
-        const status = metadata?.status as string;
-        if (status === "completed") return "bg-green-500/10 text-green-600 border-green-200";
-        if (status === "cancelled" || status === "no_show") return "bg-red-500/10 text-red-600 border-red-200";
+        const aptStatus = metadata?.status as string;
+        if (aptStatus === "completed") return "bg-green-500/10 text-green-600 border-green-200";
+        if (aptStatus === "cancelled" || aptStatus === "no_show") return "bg-red-500/10 text-red-600 border-red-200";
         return "bg-purple-500/10 text-purple-600 border-purple-200";
       case "created":
         return "bg-emerald-500/10 text-emerald-600 border-emerald-200";
+      case "eligibility_change":
+        const toStatus = metadata?.to_status as string;
+        if (toStatus === "eligible") return "bg-green-500/10 text-green-600 border-green-200";
+        if (toStatus === "ineligible") return "bg-red-500/10 text-red-600 border-red-200";
+        return "bg-yellow-500/10 text-yellow-600 border-yellow-200";
       case "status_change":
         return "bg-amber-500/10 text-amber-600 border-amber-200";
       default:
