@@ -380,6 +380,8 @@ const Donors = () => {
                   <TableHead className="hidden md:table-cell">Sex</TableHead>
                   <TableHead className="hidden lg:table-cell">Contact</TableHead>
                   <TableHead className="hidden lg:table-cell">Location</TableHead>
+                  <TableHead className="hidden xl:table-cell">Referred By</TableHead>
+                  <TableHead className="hidden xl:table-cell">Vendor #</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="w-[50px]"></TableHead>
                 </TableRow>
@@ -395,13 +397,15 @@ const Donors = () => {
                       <TableCell className="hidden md:table-cell"><Skeleton className="h-4 w-12" /></TableCell>
                       <TableCell className="hidden lg:table-cell"><Skeleton className="h-4 w-36" /></TableCell>
                       <TableCell className="hidden lg:table-cell"><Skeleton className="h-4 w-24" /></TableCell>
+                      <TableCell className="hidden xl:table-cell"><Skeleton className="h-4 w-20" /></TableCell>
+                      <TableCell className="hidden xl:table-cell"><Skeleton className="h-4 w-16" /></TableCell>
                       <TableCell><Skeleton className="h-6 w-20" /></TableCell>
                       <TableCell><Skeleton className="h-8 w-8" /></TableCell>
                     </TableRow>
                   ))
                 ) : donors.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="h-32 text-center">
+                    <TableCell colSpan={10} className="h-32 text-center">
                       <div className="text-muted-foreground">
                         {hasActiveFilters
                           ? "No donors match your filters"
@@ -457,6 +461,12 @@ const Donors = () => {
                         {donor.city && donor.state
                           ? `${donor.city}, ${donor.state}`
                           : donor.city || donor.state || "—"}
+                      </TableCell>
+                      <TableCell className="hidden xl:table-cell text-sm text-muted-foreground">
+                        {donor.referred_by || "—"}
+                      </TableCell>
+                      <TableCell className="hidden xl:table-cell text-sm text-muted-foreground font-mono">
+                        {donor.vendor_number || "—"}
                       </TableCell>
                       <TableCell>
                         {getEligibilityBadge(donor.eligibility_status)}
