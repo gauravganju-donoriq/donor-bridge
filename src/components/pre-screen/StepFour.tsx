@@ -12,7 +12,7 @@ type YesNoQuestion = {
 };
 
 const HEALTH_QUESTIONS: YesNoQuestion[] = [
-  { name: "previouslyDonated", label: "I Have Previously Donated with Lonza" },
+  { name: "previouslyDonated", label: "I Have Previously Donated with Donor Bridge" },
   { name: "underPhysicianCare", label: "Are you under the care of a physician for any medical conditions?" },
   { name: "prescriptionMeds", label: "Do you take any prescription medications? Please include allergy medications including EpiPens." },
   { name: "otherDonorPrograms", label: "In the past 6 months, have you participated in any other donor programs such as blood or plasma donation, vaccine trials, or research studies?" },

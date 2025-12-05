@@ -113,8 +113,8 @@ const AdminSidebar = () => {
         </div>
         {!collapsed && (
           <div className="flex flex-col">
-            <span className="font-bold text-sidebar-foreground">Lonza</span>
-            <span className="text-xs text-sidebar-foreground/60">Donor Management</span>
+            <span className="font-bold text-sidebar-foreground">Donor Bridge</span>
+            <span className="text-xs text-sidebar-foreground/60">by DonorIQ</span>
           </div>
         )}
       </div>
