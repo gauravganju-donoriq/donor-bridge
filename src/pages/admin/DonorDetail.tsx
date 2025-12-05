@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Save, User, Heart, Calendar, FileText, Loader2, MessageSquare, Clock, DollarSign, FlaskConical, Phone } from "lucide-react";
+import { ArrowLeft, Save, User, Heart, Calendar, FileText, Loader2, MessageSquare, Clock, DollarSign, FlaskConical, Phone, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -21,6 +21,7 @@ import DonorTimeline from "@/components/admin/donor-detail/DonorTimeline";
 import DonorPayments from "@/components/admin/donor-detail/DonorPayments";
 import DonorResults from "@/components/admin/donor-detail/DonorResults";
 import DonorFollowUps from "@/components/admin/donor-detail/DonorFollowUps";
+import DonorConsents from "@/components/admin/donor-detail/DonorConsents";
 
 type Donor = Tables<"donors">;
 
@@ -201,6 +202,10 @@ const DonorDetail = () => {
             <User className="h-3.5 w-3.5" />
             Personal
           </TabsTrigger>
+          <TabsTrigger value="consent" className="gap-1.5 text-sm h-7 px-3">
+            <ShieldCheck className="h-3.5 w-3.5" />
+            Consent
+          </TabsTrigger>
           <TabsTrigger value="medical" className="gap-1.5 text-sm h-7 px-3">
             <Heart className="h-3.5 w-3.5" />
             Medical
@@ -242,6 +247,10 @@ const DonorDetail = () => {
             setFormData={setFormData}
             editMode={editMode}
           />
+        </TabsContent>
+
+        <TabsContent value="consent" className="mt-4">
+          <DonorConsents donorId={donor.id} donorName={`${donor.first_name} ${donor.last_name}`} />
         </TabsContent>
 
         <TabsContent value="medical" className="mt-4">

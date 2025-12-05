@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Upload, FileText, Download, Trash2, Loader2, File, Image, AlertCircle, FileSignature } from "lucide-react";
+import { Upload, FileText, Download, Trash2, Loader2, File, Image, AlertCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -23,7 +23,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import ConsentFormDialog from "./ConsentFormDialog";
 
 interface DonorDocumentsProps {
   donorId: string;
@@ -43,8 +42,10 @@ interface Document {
 }
 
 const DOCUMENT_TYPES = [
-  { value: "consent_hiv", label: "HIV Consent Form" },
-  { value: "consent_bone_marrow", label: "Bone Marrow Consent Form" },
+  { value: "lab_report", label: "Lab Report" },
+  { value: "lab_blood_work", label: "Lab Report - Blood Work" },
+  { value: "lab_viral_testing", label: "Lab Report - Viral Testing" },
+  { value: "lab_genetic", label: "Lab Report - Genetic/HLA" },
   { value: "medical_record", label: "Medical Record" },
   { value: "id_verification", label: "ID Verification" },
   { value: "other", label: "Other Document" },
@@ -74,8 +75,6 @@ const DonorDocuments = ({ donorId, donorName = "Donor" }: DonorDocumentsProps) =
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [documentToDelete, setDocumentToDelete] = useState<Document | null>(null);
   const [deleting, setDeleting] = useState(false);
-  const [consentFormOpen, setConsentFormOpen] = useState(false);
-
   useEffect(() => {
     fetchDocuments();
   }, [donorId]);
@@ -250,16 +249,8 @@ const DonorDocuments = ({ donorId, donorName = "Donor" }: DonorDocumentsProps) =
           Documents ({documents.length})
         </CardTitle>
         <div className="flex items-center gap-2">
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => setConsentFormOpen(true)}
-          >
-            <FileSignature className="h-4 w-4 mr-1" />
-            New Consent
-          </Button>
           <Select value={selectedType} onValueChange={setSelectedType}>
-            <SelectTrigger className="w-[160px] h-9">
+            <SelectTrigger className="w-[200px] h-9">
               <SelectValue placeholder="Document type" />
             </SelectTrigger>
             <SelectContent>
@@ -367,14 +358,6 @@ const DonorDocuments = ({ donorId, donorName = "Donor" }: DonorDocumentsProps) =
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      <ConsentFormDialog
-        open={consentFormOpen}
-        onOpenChange={setConsentFormOpen}
-        donorId={donorId}
-        donorName={donorName}
-        onSuccess={fetchDocuments}
-      />
     </Card>
   );
 };

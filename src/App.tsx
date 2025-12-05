@@ -9,6 +9,7 @@ import PreScreenForm from "./pages/PreScreenForm";
 import Confirmation from "./pages/Confirmation";
 import NotFound from "./pages/NotFound";
 import Questionnaire from "./pages/Questionnaire";
+import ConsentForm from "./pages/ConsentForm";
 
 // Admin imports
 import Login from "./pages/admin/Login";
@@ -40,6 +41,7 @@ const App = () => (
             <Route path="/apply" element={<PreScreenForm />} />
             <Route path="/confirmation" element={<Confirmation />} />
             <Route path="/questionnaire/:token" element={<Questionnaire />} />
+            <Route path="/consent/:token" element={<ConsentForm />} />
 
             {/* Admin Routes */}
             <Route path="/admin/login" element={<Login />} />
