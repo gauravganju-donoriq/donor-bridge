@@ -59,6 +59,7 @@ interface AvailableAppointment {
   id: string;
   appointment_date: string;
   donor_letter: string | null;
+  appointment_type: string | null;
 }
 
 const DonorFollowUps = ({ donorId, donorName }: DonorFollowUpsProps) => {
@@ -99,12 +100,11 @@ const DonorFollowUps = ({ donorId, donorName }: DonorFollowUpsProps) => {
 
   const fetchAvailableAppointments = async () => {
     try {
-      // Get completed donation appointments
+      // Get completed appointments (any type)
       const { data: appointments, error: apptError } = await supabase
         .from("appointments")
-        .select("id, appointment_date, donor_letter")
+        .select("id, appointment_date, donor_letter, appointment_type")
         .eq("donor_id", donorId)
-        .eq("appointment_type", "donation")
         .eq("status", "completed")
         .order("appointment_date", { ascending: false });
 
@@ -311,11 +311,10 @@ const DonorFollowUps = ({ donorId, donorName }: DonorFollowUpsProps) => {
                           <div className="font-medium">
                             {format(parseISO(appt.appointment_date), "MMM d, yyyy")}
                           </div>
-                          {appt.donor_letter && (
-                            <div className="text-xs text-muted-foreground">
-                              Letter: {appt.donor_letter}
-                            </div>
-                          )}
+                          <div className="text-xs text-muted-foreground">
+                            {appt.appointment_type === "donation" ? "Donation" : "Screening"}
+                            {appt.donor_letter && ` • Letter: ${appt.donor_letter}`}
+                          </div>
                         </div>
                       </Button>
                     ))}
