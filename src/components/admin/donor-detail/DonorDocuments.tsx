@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Upload, FileText, Download, Trash2, Loader2, File, Image, AlertCircle } from "lucide-react";
+import { Upload, FileText, Download, Trash2, Loader2, File, Image, AlertCircle, FileSignature } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -23,9 +23,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import ConsentFormDialog from "./ConsentFormDialog";
 
 interface DonorDocumentsProps {
   donorId: string;
+  donorName?: string;
 }
 
 interface Document {
@@ -61,7 +63,7 @@ const getFileIcon = (fileType: string) => {
   return <FileText className="h-5 w-5 text-muted-foreground" />;
 };
 
-const DonorDocuments = ({ donorId }: DonorDocumentsProps) => {
+const DonorDocuments = ({ donorId, donorName = "Donor" }: DonorDocumentsProps) => {
   const { user, isAdmin } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
@@ -72,6 +74,7 @@ const DonorDocuments = ({ donorId }: DonorDocumentsProps) => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [documentToDelete, setDocumentToDelete] = useState<Document | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [consentFormOpen, setConsentFormOpen] = useState(false);
 
   useEffect(() => {
     fetchDocuments();
@@ -247,8 +250,16 @@ const DonorDocuments = ({ donorId }: DonorDocumentsProps) => {
           Documents ({documents.length})
         </CardTitle>
         <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setConsentFormOpen(true)}
+          >
+            <FileSignature className="h-4 w-4 mr-1" />
+            New Consent
+          </Button>
           <Select value={selectedType} onValueChange={setSelectedType}>
-            <SelectTrigger className="w-[180px] h-9">
+            <SelectTrigger className="w-[160px] h-9">
               <SelectValue placeholder="Document type" />
             </SelectTrigger>
             <SelectContent>
@@ -356,6 +367,14 @@ const DonorDocuments = ({ donorId }: DonorDocumentsProps) => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <ConsentFormDialog
+        open={consentFormOpen}
+        onOpenChange={setConsentFormOpen}
+        donorId={donorId}
+        donorName={donorName}
+        onSuccess={fetchDocuments}
+      />
     </Card>
   );
 };
