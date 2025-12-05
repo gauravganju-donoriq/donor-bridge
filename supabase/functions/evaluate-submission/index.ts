@@ -243,7 +243,15 @@ Provide your assessment.`,
             const aiSummary = aiData.choices?.[0]?.message?.content;
             if (aiSummary) {
               summary = aiSummary;
+              console.log("AI analysis completed successfully");
             }
+          } else if (aiResponse.status === 429) {
+            console.error("AI rate limit exceeded (429), using rule-based summary");
+          } else if (aiResponse.status === 402) {
+            console.error("AI payment required (402), using rule-based summary");
+          } else {
+            const errorText = await aiResponse.text();
+            console.error(`AI request failed (${aiResponse.status}): ${errorText}`);
           }
         } catch (aiError) {
           console.error("AI analysis failed, using rule-based summary:", aiError);
