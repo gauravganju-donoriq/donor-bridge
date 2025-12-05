@@ -264,7 +264,7 @@ const DonorDetail = () => {
         </TabsContent>
 
         <TabsContent value="documents" className="mt-4">
-          <DonorDocuments donorId={donor.id} />
+          <DonorDocuments donorId={donor.id} donorName={`${donor.first_name} ${donor.last_name}`} />
         </TabsContent>
 
         <TabsContent value="notes" className="mt-4">
