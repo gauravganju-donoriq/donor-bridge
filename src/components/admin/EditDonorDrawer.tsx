@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
-import { Loader2, User, Phone, Activity, Shield } from "lucide-react";
+import { Loader2, User, Phone, Activity, Shield, Users } from "lucide-react";
+import DonorSearchSelect from "./DonorSearchSelect";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -195,6 +196,9 @@ const EditDonorDrawer = ({ open, onOpenChange, onSuccess, donor }: EditDonorDraw
     tobacco_use: "",
     cmv_positive: "",
     social_security: "",
+    referred_by: "",
+    referred_by_donor_id: "",
+    vendor_number: "",
   });
 
   // Populate form when donor changes
@@ -226,6 +230,9 @@ const EditDonorDrawer = ({ open, onOpenChange, onSuccess, donor }: EditDonorDraw
         tobacco_use: donor.tobacco_use === true ? "yes" : donor.tobacco_use === false ? "no" : "",
         cmv_positive: donor.cmv_positive || "",
         social_security: donor.social_security_encrypted || "",
+        referred_by: donor.referred_by || "",
+        referred_by_donor_id: donor.referred_by_donor_id || "",
+        vendor_number: donor.vendor_number || "",
       });
       setIsDirty(false);
       setErrors({});
@@ -361,6 +368,9 @@ const EditDonorDrawer = ({ open, onOpenChange, onSuccess, donor }: EditDonorDraw
         tobacco_use: donor.tobacco_use === true ? "yes" : donor.tobacco_use === false ? "no" : "",
         cmv_positive: donor.cmv_positive || "",
         social_security: donor.social_security_encrypted || "",
+        referred_by: donor.referred_by || "",
+        referred_by_donor_id: donor.referred_by_donor_id || "",
+        vendor_number: donor.vendor_number || "",
       });
       setIsDirty(false);
       setErrors({});
@@ -417,6 +427,9 @@ const EditDonorDrawer = ({ open, onOpenChange, onSuccess, donor }: EditDonorDraw
           tobacco_use: formData.tobacco_use === "yes" ? true : formData.tobacco_use === "no" ? false : null,
           cmv_positive: formData.cmv_positive || "unknown",
           social_security_encrypted: formData.social_security || null,
+          referred_by: formData.referred_by || null,
+          referred_by_donor_id: formData.referred_by_donor_id || null,
+          vendor_number: formData.vendor_number || null,
         })
         .eq("id", donor.id);
 
@@ -715,6 +728,39 @@ const EditDonorDrawer = ({ open, onOpenChange, onSuccess, donor }: EditDonorDraw
                     <p className="text-xs text-destructive">{errors.postal_code}</p>
                   )}
                 </div>
+              </div>
+            </Section>
+
+            {/* REFERRAL & TRACKING */}
+            <Section icon={Users} title="Referral & Tracking">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="edit_referred_by">Referred By</Label>
+                  <Input
+                    id="edit_referred_by"
+                    value={formData.referred_by}
+                    onChange={(e) => updateField("referred_by", e.target.value)}
+                    placeholder="e.g., Dr. Smith, Google"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="edit_vendor_number">Vendor Number</Label>
+                  <Input
+                    id="edit_vendor_number"
+                    value={formData.vendor_number}
+                    onChange={(e) => updateField("vendor_number", e.target.value)}
+                    placeholder="External reference"
+                  />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Referring Donor</Label>
+                <DonorSearchSelect
+                  value={formData.referred_by_donor_id}
+                  onChange={(v) => updateField("referred_by_donor_id", v)}
+                  excludeDonorId={donor?.id}
+                  placeholder="Search if referred by another donor..."
+                />
               </div>
             </Section>
 

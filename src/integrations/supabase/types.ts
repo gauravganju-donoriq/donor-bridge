@@ -380,10 +380,13 @@ export type Database = {
           next_eligible_date: string | null
           postal_code: string | null
           pronouns: string | null
+          referred_by: string | null
+          referred_by_donor_id: string | null
           social_security_encrypted: string | null
           state: string | null
           tobacco_use: boolean | null
           updated_at: string | null
+          vendor_number: string | null
           weight_pounds: number | null
           work_phone: string | null
         }
@@ -417,10 +420,13 @@ export type Database = {
           next_eligible_date?: string | null
           postal_code?: string | null
           pronouns?: string | null
+          referred_by?: string | null
+          referred_by_donor_id?: string | null
           social_security_encrypted?: string | null
           state?: string | null
           tobacco_use?: boolean | null
           updated_at?: string | null
+          vendor_number?: string | null
           weight_pounds?: number | null
           work_phone?: string | null
         }
@@ -454,14 +460,25 @@ export type Database = {
           next_eligible_date?: string | null
           postal_code?: string | null
           pronouns?: string | null
+          referred_by?: string | null
+          referred_by_donor_id?: string | null
           social_security_encrypted?: string | null
           state?: string | null
           tobacco_use?: boolean | null
           updated_at?: string | null
+          vendor_number?: string | null
           weight_pounds?: number | null
           work_phone?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "donors_referred_by_donor_id_fkey"
+            columns: ["referred_by_donor_id"]
+            isOneToOne: false
+            referencedRelation: "donors"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       follow_ups: {
         Row: {
