@@ -178,8 +178,7 @@ const DonorPayments = ({ donorId }: DonorPaymentsProps) => {
             {payments.length === 0 ? (
               <div className="text-center py-10 text-muted-foreground border-2 border-dashed rounded-lg">
                 <DollarSign className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                <p className="text-sm font-medium">No payments recorded</p>
-                <p className="text-sm">Click "Add Payment" to record one.</p>
+                <p className="text-sm">No payments recorded</p>
               </div>
             ) : (
               <Table>

@@ -201,8 +201,7 @@ const DonorTimeline = ({ donorId, donorCreatedAt }: DonorTimelineProps) => {
         {events.length === 0 ? (
           <div className="text-center py-10 text-muted-foreground border-2 border-dashed rounded-lg">
             <Clock className="h-8 w-8 mx-auto mb-2 opacity-50" />
-            <p className="text-sm font-medium">No activity yet</p>
-            <p className="text-sm">Activity will appear here as it happens.</p>
+            <p className="text-sm">No activity yet</p>
           </div>
         ) : (
           <div className="relative">

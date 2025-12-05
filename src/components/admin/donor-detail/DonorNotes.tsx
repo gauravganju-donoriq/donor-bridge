@@ -201,8 +201,7 @@ const DonorNotes = ({ donorId }: DonorNotesProps) => {
           {notes.length === 0 ? (
             <div className="text-center py-10 text-muted-foreground border-2 border-dashed rounded-lg">
               <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-50" />
-              <p className="text-sm font-medium">No notes yet</p>
-              <p className="text-sm">Add a note to track interactions.</p>
+              <p className="text-sm">No notes yet</p>
             </div>
           ) : (
             <div className="space-y-3">

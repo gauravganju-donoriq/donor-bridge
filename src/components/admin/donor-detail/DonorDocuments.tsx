@@ -280,12 +280,9 @@ const DonorDocuments = ({ donorId, donorName = "Donor" }: DonorDocumentsProps) =
       </CardHeader>
       <CardContent>
         {documents.length === 0 ? (
-          <div className="text-center py-10 border-2 border-dashed rounded-lg">
-            <File className="h-10 w-10 mx-auto mb-3 text-muted-foreground opacity-50" />
-            <p className="text-sm font-medium mb-1">No Documents</p>
-            <p className="text-sm text-muted-foreground max-w-sm mx-auto">
-              Upload medical records, consent forms, and other documents.
-            </p>
+          <div className="text-center py-10 border-2 border-dashed rounded-lg text-muted-foreground">
+            <File className="h-8 w-8 mx-auto mb-2 opacity-50" />
+            <p className="text-sm">No documents uploaded</p>
           </div>
         ) : (
           <div className="space-y-2">

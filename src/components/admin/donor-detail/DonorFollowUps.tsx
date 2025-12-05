@@ -327,8 +327,7 @@ const DonorFollowUps = ({ donorId, donorName }: DonorFollowUpsProps) => {
             {followUps.length === 0 ? (
               <div className="text-center py-10 text-muted-foreground border-2 border-dashed rounded-lg">
                 <Phone className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                <p className="text-sm font-medium">No follow-ups recorded</p>
-                <p className="text-sm">Follow-ups will appear here after donations are completed.</p>
+                <p className="text-sm">No follow-ups recorded</p>
               </div>
             ) : (
               <div className="space-y-2">
