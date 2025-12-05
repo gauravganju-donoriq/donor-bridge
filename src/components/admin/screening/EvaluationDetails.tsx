@@ -1,0 +1,224 @@
+import { useState } from "react";
+import { Brain, Shield, AlertTriangle, Info, RefreshCw, Sparkles } from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import { EvaluationBadge } from "./EvaluationBadge";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+
+interface EvaluationFlag {
+  rule_key: string;
+  rule_name: string;
+  severity: string;
+  message: string;
+  rule_type: string;
+  actual_value?: string | number | boolean;
+}
+
+interface EvaluationData {
+  score: number;
+  recommendation: string;
+  flags: EvaluationFlag[];
+  summary: string;
+  evaluated_at: string;
+}
+
+interface EvaluationDetailsProps {
+  submissionId: string;
+  evaluation: EvaluationData | null;
+  score: number | null;
+  recommendation: string | null;
+  flags: EvaluationFlag[] | null;
+  evaluatedAt: string | null;
+  onEvaluationComplete: () => void;
+}
+
+export const EvaluationDetails = ({
+  submissionId,
+  evaluation,
+  score,
+  recommendation,
+  flags,
+  evaluatedAt,
+  onEvaluationComplete,
+}: EvaluationDetailsProps) => {
+  const { toast } = useToast();
+  const [evaluating, setEvaluating] = useState(false);
+
+  const handleEvaluate = async (useAi: boolean = false) => {
+    setEvaluating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("evaluate-submission", {
+        body: { submission_id: submissionId, use_ai: useAi },
+      });
+
+      if (error) throw error;
+
+      if (data?.success) {
+        toast({
+          title: "Evaluation Complete",
+          description: `Recommendation: ${data.evaluation.recommendation} (Score: ${data.evaluation.score})`,
+        });
+        onEvaluationComplete();
+      } else {
+        throw new Error(data?.error || "Evaluation failed");
+      }
+    } catch (error) {
+      console.error("Evaluation error:", error);
+      toast({
+        title: "Evaluation Failed",
+        description: error instanceof Error ? error.message : "Unknown error occurred",
+        variant: "destructive",
+      });
+    } finally {
+      setEvaluating(false);
+    }
+  };
+
+  const getSeverityIcon = (severity: string, ruleType: string) => {
+    if (ruleType === "hard_disqualify") {
+      return <Shield className="h-4 w-4 text-destructive" />;
+    }
+    switch (severity) {
+      case "critical":
+        return <Shield className="h-4 w-4 text-destructive" />;
+      case "high":
+        return <AlertTriangle className="h-4 w-4 text-orange-500" />;
+      case "medium":
+        return <AlertTriangle className="h-4 w-4 text-yellow-500" />;
+      default:
+        return <Info className="h-4 w-4 text-blue-500" />;
+    }
+  };
+
+  const getSeverityBadge = (severity: string) => {
+    switch (severity) {
+      case "critical":
+        return <Badge variant="destructive" className="text-xs">Critical</Badge>;
+      case "high":
+        return <Badge className="bg-orange-500/10 text-orange-600 text-xs">High</Badge>;
+      case "medium":
+        return <Badge className="bg-yellow-500/10 text-yellow-600 text-xs">Medium</Badge>;
+      default:
+        return <Badge className="bg-blue-500/10 text-blue-600 text-xs">Low</Badge>;
+    }
+  };
+
+  const displayFlags = flags || evaluation?.flags || [];
+  const displaySummary = evaluation?.summary;
+  const displayScore = score ?? evaluation?.score;
+  const displayRecommendation = recommendation ?? evaluation?.recommendation;
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Brain className="h-5 w-5 text-primary" />
+            AI Pre-Screening
+          </CardTitle>
+          <div className="flex items-center gap-2">
+            {displayRecommendation && (
+              <EvaluationBadge recommendation={displayRecommendation} score={displayScore} showScore />
+            )}
+          </div>
+        </div>
+        {evaluatedAt && (
+          <CardDescription className="text-xs">
+            Last evaluated: {new Date(evaluatedAt).toLocaleString()}
+          </CardDescription>
+        )}
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* Action Buttons */}
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handleEvaluate(false)}
+            disabled={evaluating}
+            className="flex-1"
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${evaluating ? "animate-spin" : ""}`} />
+            {evaluating ? "Evaluating..." : displayRecommendation ? "Re-evaluate" : "Evaluate Now"}
+          </Button>
+          {displayRecommendation === "review_required" && (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => handleEvaluate(true)}
+              disabled={evaluating}
+              className="flex-1"
+            >
+              <Sparkles className="h-4 w-4 mr-2" />
+              AI Analysis
+            </Button>
+          )}
+        </div>
+
+        {/* Summary */}
+        {displaySummary && (
+          <div className="p-3 rounded-lg bg-muted/50 text-sm">
+            {displaySummary}
+          </div>
+        )}
+
+        {/* Flags */}
+        {displayFlags.length > 0 && (
+          <>
+            <Separator />
+            <div className="space-y-2">
+              <h4 className="text-sm font-medium">Triggered Flags ({displayFlags.length})</h4>
+              <div className="space-y-2">
+                {displayFlags.map((flag, index) => (
+                  <div
+                    key={index}
+                    className="flex items-start gap-3 p-2 rounded-lg border bg-card"
+                  >
+                    {getSeverityIcon(flag.severity, flag.rule_type)}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-medium text-sm">{flag.rule_name}</span>
+                        {getSeverityBadge(flag.severity)}
+                        {flag.rule_type === "hard_disqualify" && (
+                          <Badge variant="destructive" className="text-xs">Disqualifier</Badge>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">{flag.message}</p>
+                      {flag.actual_value !== undefined && (
+                        <p className="text-xs text-muted-foreground font-mono mt-1">
+                          Value: {String(flag.actual_value)}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* No flags message */}
+        {displayRecommendation && displayFlags.length === 0 && (
+          <div className="text-center py-4 text-muted-foreground text-sm">
+            <Info className="h-5 w-5 mx-auto mb-2 opacity-50" />
+            No flags triggered
+          </div>
+        )}
+
+        {/* Not evaluated message */}
+        {!displayRecommendation && (
+          <div className="text-center py-4 text-muted-foreground text-sm">
+            <Brain className="h-8 w-8 mx-auto mb-2 opacity-30" />
+            <p>This submission has not been evaluated yet.</p>
+            <p className="text-xs mt-1">Click "Evaluate Now" to run the screening rules.</p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
+
+export default EvaluationDetails;

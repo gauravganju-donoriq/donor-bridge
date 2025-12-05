@@ -721,6 +721,51 @@ export type Database = {
         }
         Relationships: []
       }
+      screening_rules: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          display_order: number | null
+          field_path: string
+          id: string
+          is_active: boolean | null
+          rule_key: string
+          rule_name: string
+          rule_type: string
+          rule_value: Json
+          severity: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          display_order?: number | null
+          field_path: string
+          id?: string
+          is_active?: boolean | null
+          rule_key: string
+          rule_name: string
+          rule_type: string
+          rule_value: Json
+          severity?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          display_order?: number | null
+          field_path?: string
+          id?: string
+          is_active?: boolean | null
+          rule_key?: string
+          rule_name?: string
+          rule_type?: string
+          rule_value?: Json
+          severity?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string | null
@@ -748,6 +793,9 @@ export type Database = {
           acknowledge_info_accurate: boolean | null
           acknowledge_time_commitment: boolean | null
           address_line_2: string | null
+          ai_evaluation: Json | null
+          ai_recommendation: string | null
+          ai_score: number | null
           assigned_sex: string | null
           birth_date: string | null
           blood_disorder_details: string | null
@@ -756,6 +804,8 @@ export type Database = {
           created_at: string | null
           email: string | null
           ethnicity: string[] | null
+          evaluated_at: string | null
+          evaluation_flags: Json | null
           first_name: string
           had_surgery: boolean | null
           has_been_incarcerated: boolean | null
@@ -794,6 +844,9 @@ export type Database = {
           acknowledge_info_accurate?: boolean | null
           acknowledge_time_commitment?: boolean | null
           address_line_2?: string | null
+          ai_evaluation?: Json | null
+          ai_recommendation?: string | null
+          ai_score?: number | null
           assigned_sex?: string | null
           birth_date?: string | null
           blood_disorder_details?: string | null
@@ -802,6 +855,8 @@ export type Database = {
           created_at?: string | null
           email?: string | null
           ethnicity?: string[] | null
+          evaluated_at?: string | null
+          evaluation_flags?: Json | null
           first_name: string
           had_surgery?: boolean | null
           has_been_incarcerated?: boolean | null
@@ -840,6 +895,9 @@ export type Database = {
           acknowledge_info_accurate?: boolean | null
           acknowledge_time_commitment?: boolean | null
           address_line_2?: string | null
+          ai_evaluation?: Json | null
+          ai_recommendation?: string | null
+          ai_score?: number | null
           assigned_sex?: string | null
           birth_date?: string | null
           blood_disorder_details?: string | null
@@ -848,6 +906,8 @@ export type Database = {
           created_at?: string | null
           email?: string | null
           ethnicity?: string[] | null
+          evaluated_at?: string | null
+          evaluation_flags?: Json | null
           first_name?: string
           had_surgery?: boolean | null
           has_been_incarcerated?: boolean | null

@@ -17,6 +17,8 @@ import {
   Calendar,
   Ruler,
   Scale,
+  Brain,
+  Play,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -63,7 +65,19 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { format, differenceInYears } from "date-fns";
 import type { Tables } from "@/integrations/supabase/types";
+import { EvaluationBadge } from "@/components/admin/screening/EvaluationBadge";
+import { EvaluationDetails } from "@/components/admin/screening/EvaluationDetails";
 
+interface EvaluationFlag {
+  rule_key: string;
+  rule_name: string;
+  severity: string;
+  message: string;
+  rule_type: string;
+  actual_value?: string | number | boolean;
+}
+
+// Use the base type from supabase and cast the JSON fields as needed
 type Submission = Tables<"webform_submissions">;
 type SubmissionStatus = "pending" | "approved" | "rejected" | "linked_to_donor";
 
@@ -81,6 +95,7 @@ const DonorApproval = () => {
   // Filters
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("pending");
+  const [aiFilter, setAiFilter] = useState<"all" | "suitable" | "unsuitable" | "review_required" | "not_evaluated">("all");
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -96,7 +111,8 @@ const DonorApproval = () => {
   // Fetch submissions
   useEffect(() => {
     fetchSubmissions();
-  }, [currentPage, statusFilter, searchQuery]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPage, statusFilter, searchQuery, aiFilter]);
 
   const fetchSubmissions = async () => {
     setLoading(true);
@@ -116,6 +132,15 @@ const DonorApproval = () => {
         query = query.or(
           `first_name.ilike.%${search}%,last_name.ilike.%${search}%,submission_id.ilike.%${search}%,email.ilike.%${search}%`
         );
+      }
+
+      // Apply AI filter
+      if (aiFilter !== "all") {
+        if (aiFilter === "not_evaluated") {
+          query = query.is("ai_recommendation", null);
+        } else {
+          query = query.eq("ai_recommendation", aiFilter);
+        }
       }
 
       // Pagination
@@ -144,7 +169,7 @@ const DonorApproval = () => {
   // Reset page when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [statusFilter, searchQuery]);
+  }, [statusFilter, searchQuery, aiFilter]);
 
   const totalPages = Math.ceil(totalCount / PAGE_SIZE);
 
@@ -342,6 +367,21 @@ const DonorApproval = () => {
                 <SelectItem value="linked_to_donor">Linked</SelectItem>
               </SelectContent>
             </Select>
+            <Select
+              value={aiFilter}
+              onValueChange={(v) => setAiFilter(v as typeof aiFilter)}
+            >
+              <SelectTrigger className="w-full sm:w-[180px]">
+                <SelectValue placeholder="AI Recommendation" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All AI Results</SelectItem>
+                <SelectItem value="suitable">✓ Suitable</SelectItem>
+                <SelectItem value="unsuitable">✗ Unsuitable</SelectItem>
+                <SelectItem value="review_required">⚠ Review Required</SelectItem>
+                <SelectItem value="not_evaluated">Not Evaluated</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </CardContent>
       </Card>
@@ -366,6 +406,7 @@ const DonorApproval = () => {
                   <TableHead className="hidden lg:table-cell">Location</TableHead>
                   <TableHead className="hidden md:table-cell">Submitted</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead className="hidden sm:table-cell">AI</TableHead>
                   <TableHead className="w-[80px]"></TableHead>
                 </TableRow>
               </TableHeader>
@@ -379,12 +420,13 @@ const DonorApproval = () => {
                       <TableCell className="hidden lg:table-cell"><Skeleton className="h-4 w-24" /></TableCell>
                       <TableCell className="hidden md:table-cell"><Skeleton className="h-4 w-20" /></TableCell>
                       <TableCell><Skeleton className="h-6 w-20" /></TableCell>
+                      <TableCell className="hidden sm:table-cell"><Skeleton className="h-6 w-16" /></TableCell>
                       <TableCell><Skeleton className="h-8 w-16" /></TableCell>
                     </TableRow>
                   ))
                 ) : submissions.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="h-32 text-center">
+                    <TableCell colSpan={8} className="h-32 text-center">
                       <div className="text-muted-foreground">
                         {statusFilter === "pending"
                           ? "No pending submissions"
@@ -439,6 +481,12 @@ const DonorApproval = () => {
                           : "—"}
                       </TableCell>
                       <TableCell>{getStatusBadge(submission.status)}</TableCell>
+                      <TableCell className="hidden sm:table-cell">
+                        <EvaluationBadge
+                          recommendation={submission.ai_recommendation || null}
+                          score={submission.ai_score}
+                        />
+                      </TableCell>
                       <TableCell>
                         <Button variant="ghost" size="sm" onClick={(e) => {
                           e.stopPropagation();
@@ -507,6 +555,17 @@ const DonorApproval = () => {
               </SheetHeader>
 
               <div className="mt-6 space-y-6">
+                {/* AI Pre-Screening Evaluation */}
+                <EvaluationDetails
+                  submissionId={selectedSubmission.id}
+                  evaluation={selectedSubmission.ai_evaluation as unknown as Parameters<typeof EvaluationDetails>[0]["evaluation"]}
+                  score={selectedSubmission.ai_score ?? null}
+                  recommendation={selectedSubmission.ai_recommendation ?? null}
+                  flags={(selectedSubmission.evaluation_flags as unknown as EvaluationFlag[]) ?? null}
+                  evaluatedAt={selectedSubmission.evaluated_at ?? null}
+                  onEvaluationComplete={fetchSubmissions}
+                />
+
                 {/* Personal Information */}
                 <div>
                   <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
