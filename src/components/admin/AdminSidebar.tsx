@@ -12,6 +12,8 @@ import {
   Dna,
   LayoutDashboard,
   Phone,
+  Settings,
+  Brain,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
@@ -30,6 +32,10 @@ const navItems = [
   { to: "/admin/appointments", label: "Appointments", icon: Calendar },
   { to: "/admin/follow-ups", label: "Follow-Ups", icon: Phone },
   { to: "/admin/reports", label: "Reports", icon: FileText },
+];
+
+const settingsItems = [
+  { to: "/admin/screening-rules", label: "Screening Rules", icon: Brain },
 ];
 
 const adminItems = [
@@ -144,6 +150,20 @@ const AdminSidebar = () => {
             </div>
           </div>
         )}
+
+        {/* Settings Section */}
+        <div className="space-y-1 pt-4">
+          {!collapsed && (
+            <span className="px-3 text-xs font-semibold text-sidebar-foreground/50 uppercase tracking-wider">
+              Settings
+            </span>
+          )}
+          <div className="space-y-1 mt-2">
+            {settingsItems.map((item) => (
+              <NavItem key={item.to} item={item} />
+            ))}
+          </div>
+        </div>
       </nav>
 
       {/* User Section */}

@@ -23,6 +23,7 @@ import FollowUps from "./pages/admin/FollowUps";
 import Reports from "./pages/admin/Reports";
 import Users from "./pages/admin/Users";
 import Logs from "./pages/admin/Logs";
+import ScreeningRules from "./pages/admin/ScreeningRules";
 
 const queryClient = new QueryClient();
 
@@ -65,8 +66,9 @@ const App = () => (
                     <Users />
                   </ProtectedRoute>
                 }
-              />
+                />
               <Route path="logs" element={<Logs />} />
+              <Route path="screening-rules" element={<ScreeningRules />} />
             </Route>
 
             {/* Catch-all */}
