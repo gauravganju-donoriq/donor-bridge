@@ -55,7 +55,7 @@ const StepFive = () => {
       </ReviewSection>
 
       <ReviewSection title="Health Screening">
-        <ReviewItem label="Previously Donated with Lonza" value={formatYesNo(data.previouslyDonated)} />
+        <ReviewItem label="Previously Donated with Donor Bridge" value={formatYesNo(data.previouslyDonated)} />
         <ReviewItem label="Under Physician Care" value={formatYesNo(data.underPhysicianCare)} />
         <ReviewItem label="Prescription Medications" value={formatYesNo(data.prescriptionMeds)} />
         <ReviewItem label="Other Donor Programs (6 mo)" value={formatYesNo(data.otherDonorPrograms)} />

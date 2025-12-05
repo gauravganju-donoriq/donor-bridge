@@ -135,7 +135,7 @@ const Login = () => {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl">
-            <span className="text-primary">Lonza</span> Admin Portal
+            <span className="text-primary">Donor Bridge</span> Admin Portal
           </CardTitle>
           <CardDescription>
             Sign in to access the donor management system

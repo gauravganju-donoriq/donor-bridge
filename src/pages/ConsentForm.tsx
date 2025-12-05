@@ -353,7 +353,7 @@ const ConsentForm = () => {
       <div className="max-w-2xl mx-auto space-y-6">
         {/* Header */}
         <div className="text-center">
-          <h1 className="text-2xl font-bold">Lonza Donor Program</h1>
+          <h1 className="text-2xl font-bold">Donor Bridge</h1>
           <Badge variant="secondary" className="mt-2">Consent Forms</Badge>
         </div>
 
