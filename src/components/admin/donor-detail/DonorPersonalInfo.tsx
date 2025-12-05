@@ -4,6 +4,9 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { Tables } from "@/integrations/supabase/types";
 import { format } from "date-fns";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import DonorSearchSelect from "../DonorSearchSelect";
 
 type Donor = Tables<"donors">;
 
@@ -15,6 +18,25 @@ interface DonorPersonalInfoProps {
 }
 
 const DonorPersonalInfo = ({ donor, formData, setFormData, editMode }: DonorPersonalInfoProps) => {
+  const [referringDonor, setReferringDonor] = useState<{ donor_id: string; first_name: string; last_name: string } | null>(null);
+
+  // Fetch referring donor details for display mode
+  useEffect(() => {
+    const fetchReferringDonor = async () => {
+      if (donor.referred_by_donor_id) {
+        const { data } = await supabase
+          .from("donors")
+          .select("donor_id, first_name, last_name")
+          .eq("id", donor.referred_by_donor_id)
+          .single();
+        setReferringDonor(data);
+      } else {
+        setReferringDonor(null);
+      }
+    };
+    fetchReferringDonor();
+  }, [donor.referred_by_donor_id]);
+
   const updateField = (field: keyof Donor, value: unknown) => {
     setFormData({ ...formData, [field]: value });
   };
@@ -170,6 +192,37 @@ const DonorPersonalInfo = ({ donor, formData, setFormData, editMode }: DonorPers
             )}
           </div>
           <FieldInput label="Ineligibility Reason" field="ineligibility_reason" placeholder="Reason if ineligible" />
+        </CardContent>
+      </Card>
+
+      {/* Referral & Vendor */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base font-semibold">Referral & Vendor</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <FieldInput label="Referred By" field="referred_by" placeholder="e.g., Dr. Smith, Google" />
+            <FieldInput label="Vendor Number" field="vendor_number" placeholder="External reference" />
+          </div>
+          <div className="space-y-1.5">
+            {editMode ? (
+              <>
+                <Label className="text-sm">Referring Donor</Label>
+                <DonorSearchSelect
+                  value={(formData.referred_by_donor_id as string) || ""}
+                  onChange={(v) => updateField("referred_by_donor_id", v || null)}
+                  excludeDonorId={donor.id}
+                  placeholder="Search if referred by another donor..."
+                />
+              </>
+            ) : (
+              <FieldDisplay 
+                label="Referring Donor" 
+                value={referringDonor ? `${referringDonor.donor_id} - ${referringDonor.first_name} ${referringDonor.last_name}` : null} 
+              />
+            )}
+          </div>
         </CardContent>
       </Card>
     </div>
