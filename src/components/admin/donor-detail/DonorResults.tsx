@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { FlaskConical, Calendar, User, Clock, Pencil } from "lucide-react";
+import { FlaskConical, Calendar, User, Clock, Pencil, Plus, ChevronDown } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -11,6 +11,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { format, parseISO } from "date-fns";
@@ -46,14 +51,25 @@ interface DonationResult {
   };
 }
 
+interface AvailableAppointment {
+  id: string;
+  appointment_date: string;
+  donor_letter: string | null;
+}
+
 const DonorResults = ({ donorId, donorName }: DonorResultsProps) => {
   const [results, setResults] = useState<DonationResult[]>([]);
   const [loading, setLoading] = useState(true);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [selectedResult, setSelectedResult] = useState<DonationResult | null>(null);
+  const [selectedAppointmentId, setSelectedAppointmentId] = useState<string | null>(null);
+  const [availableAppointments, setAvailableAppointments] = useState<AvailableAppointment[]>([]);
+  const [addPopoverOpen, setAddPopoverOpen] = useState(false);
 
   useEffect(() => {
     fetchResults();
+    fetchAvailableAppointments();
   }, [donorId]);
 
   const fetchResults = async () => {
@@ -95,9 +111,54 @@ const DonorResults = ({ donorId, donorName }: DonorResultsProps) => {
     }
   };
 
+  const fetchAvailableAppointments = async () => {
+    try {
+      // Get completed donation appointments without results
+      const { data: appointments, error: apptError } = await supabase
+        .from("appointments")
+        .select("id, appointment_date, donor_letter")
+        .eq("donor_id", donorId)
+        .eq("appointment_type", "donation")
+        .eq("status", "completed")
+        .order("appointment_date", { ascending: false });
+
+      if (apptError) throw apptError;
+
+      if (!appointments || appointments.length === 0) {
+        setAvailableAppointments([]);
+        return;
+      }
+
+      // Get existing results
+      const { data: existingResults, error: resultsError } = await supabase
+        .from("donation_results")
+        .select("appointment_id")
+        .in("appointment_id", appointments.map(a => a.id));
+
+      if (resultsError) throw resultsError;
+
+      const existingIds = new Set(existingResults?.map(r => r.appointment_id) || []);
+      const available = appointments.filter(a => !existingIds.has(a.id));
+      setAvailableAppointments(available);
+    } catch (error) {
+      console.error("Error fetching available appointments:", error);
+    }
+  };
+
   const handleEdit = (result: DonationResult) => {
     setSelectedResult(result);
     setEditDialogOpen(true);
+  };
+
+  const handleAddResult = (appointmentId: string) => {
+    setSelectedAppointmentId(appointmentId);
+    setAddPopoverOpen(false);
+    setCreateDialogOpen(true);
+  };
+
+  const handleSuccess = () => {
+    fetchResults();
+    fetchAvailableAppointments();
   };
 
   const totalVolume = results.reduce((sum, r) => sum + (r.final_vol_ml || r.volume_ml || 0), 0);
@@ -149,10 +210,49 @@ const DonorResults = ({ donorId, donorName }: DonorResultsProps) => {
 
         {/* Results Table */}
         <Card>
-          <CardHeader className="pb-3">
+          <CardHeader className="pb-3 flex flex-row items-center justify-between">
             <CardTitle className="text-base font-semibold">
               Donation Results ({results.length})
             </CardTitle>
+            <Popover open={addPopoverOpen} onOpenChange={setAddPopoverOpen}>
+              <PopoverTrigger asChild>
+                <Button size="sm" disabled={availableAppointments.length === 0}>
+                  <Plus className="h-4 w-4 mr-1" />
+                  Add Result
+                  <ChevronDown className="h-4 w-4 ml-1" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-72 p-2" align="end">
+                <div className="text-sm font-medium mb-2 px-2">Select Completed Appointment</div>
+                {availableAppointments.length === 0 ? (
+                  <div className="text-sm text-muted-foreground px-2 py-4 text-center">
+                    No completed appointments without results
+                  </div>
+                ) : (
+                  <div className="space-y-1">
+                    {availableAppointments.map((appt) => (
+                      <Button
+                        key={appt.id}
+                        variant="ghost"
+                        className="w-full justify-start text-left h-auto py-2"
+                        onClick={() => handleAddResult(appt.id)}
+                      >
+                        <div>
+                          <div className="font-medium">
+                            {format(parseISO(appt.appointment_date), "MMM d, yyyy")}
+                          </div>
+                          {appt.donor_letter && (
+                            <div className="text-xs text-muted-foreground">
+                              Letter: {appt.donor_letter}
+                            </div>
+                          )}
+                        </div>
+                      </Button>
+                    ))}
+                  </div>
+                )}
+              </PopoverContent>
+            </Popover>
           </CardHeader>
           <CardContent>
             {results.length === 0 ? (
@@ -287,6 +387,7 @@ const DonorResults = ({ donorId, donorName }: DonorResultsProps) => {
         )}
       </div>
 
+      {/* Edit Dialog */}
       {selectedResult && (
         <DonationResultsDialog
           open={editDialogOpen}
@@ -295,7 +396,19 @@ const DonorResults = ({ donorId, donorName }: DonorResultsProps) => {
           donorId={donorId}
           donorName={donorName}
           existingResult={selectedResult as ExistingResult}
-          onSuccess={fetchResults}
+          onSuccess={handleSuccess}
+        />
+      )}
+
+      {/* Create Dialog */}
+      {selectedAppointmentId && (
+        <DonationResultsDialog
+          open={createDialogOpen}
+          onOpenChange={setCreateDialogOpen}
+          appointmentId={selectedAppointmentId}
+          donorId={donorId}
+          donorName={donorName}
+          onSuccess={handleSuccess}
         />
       )}
     </>
