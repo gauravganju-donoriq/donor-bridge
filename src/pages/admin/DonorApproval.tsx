@@ -324,6 +324,79 @@ const DonorApproval = () => {
     </div>
   );
 
+  // Batch evaluate all not-evaluated submissions
+  const [batchEvaluating, setBatchEvaluating] = useState(false);
+  
+  const handleBatchEvaluate = async () => {
+    setBatchEvaluating(true);
+    try {
+      // Get all submissions that haven't been evaluated
+      const { data: pendingSubmissions, error: fetchError } = await supabase
+        .from("webform_submissions")
+        .select("id")
+        .is("ai_recommendation", null)
+        .limit(50);
+
+      if (fetchError) throw fetchError;
+
+      if (!pendingSubmissions || pendingSubmissions.length === 0) {
+        toast({
+          title: "No Submissions to Evaluate",
+          description: "All submissions have already been evaluated.",
+        });
+        return;
+      }
+
+      toast({
+        title: "Batch Evaluation Started",
+        description: `Evaluating ${pendingSubmissions.length} submission(s)...`,
+      });
+
+      // Process in batches of 3
+      const batchSize = 3;
+      let processed = 0;
+
+      for (let i = 0; i < pendingSubmissions.length; i += batchSize) {
+        const batch = pendingSubmissions.slice(i, i + batchSize);
+        
+        // Process batch in parallel
+        await Promise.all(
+          batch.map(async (sub) => {
+            try {
+              await supabase.functions.invoke("evaluate-submission", {
+                body: { submission_id: sub.id, use_ai: false },
+              });
+              processed++;
+            } catch (err) {
+              console.error(`Failed to evaluate ${sub.id}:`, err);
+            }
+          })
+        );
+        
+        // Small delay between batches to avoid rate limiting
+        if (i + batchSize < pendingSubmissions.length) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+      }
+
+      toast({
+        title: "Batch Evaluation Complete",
+        description: `Successfully evaluated ${processed} of ${pendingSubmissions.length} submissions.`,
+      });
+
+      fetchSubmissions();
+    } catch (error) {
+      console.error("Batch evaluation error:", error);
+      toast({
+        title: "Error",
+        description: "Failed to run batch evaluation.",
+        variant: "destructive",
+      });
+    } finally {
+      setBatchEvaluating(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -334,6 +407,14 @@ const DonorApproval = () => {
             Review and approve webform submissions ({totalCount} total)
           </p>
         </div>
+        <Button
+          variant="outline"
+          onClick={handleBatchEvaluate}
+          disabled={batchEvaluating}
+        >
+          <Brain className={`h-4 w-4 mr-2 ${batchEvaluating ? "animate-pulse" : ""}`} />
+          {batchEvaluating ? "Evaluating..." : "Evaluate All"}
+        </Button>
       </div>
 
       {/* Filters */}
