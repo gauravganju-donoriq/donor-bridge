@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Copy, Link2, Eye, Loader2, ShieldCheck, Clock, CheckCircle, XCircle, RotateCcw } from "lucide-react";
+import { Copy, Link2, Eye, Loader2, ShieldCheck, Clock, CheckCircle, XCircle, RotateCcw, Trash2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -67,6 +67,9 @@ const DonorConsents = ({ donorId, donorName = "Donor" }: DonorConsentsProps) => 
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [revokeDialogOpen, setRevokeDialogOpen] = useState(false);
   const [tokenToRevoke, setTokenToRevoke] = useState<string | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [tokenToDelete, setTokenToDelete] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     fetchConsents();
@@ -185,6 +188,35 @@ const DonorConsents = ({ donorId, donorName = "Donor" }: DonorConsentsProps) => 
     } finally {
       setRevokeDialogOpen(false);
       setTokenToRevoke(null);
+    }
+  };
+
+  const handleDeleteClick = (token: string) => {
+    setTokenToDelete(token);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!tokenToDelete) return;
+
+    setDeleting(true);
+    try {
+      const { error } = await supabase
+        .from("donor_consents")
+        .delete()
+        .eq("access_token", tokenToDelete);
+
+      if (error) throw error;
+
+      toast.success("Consent request deleted");
+      fetchConsents();
+    } catch (error) {
+      console.error("Error deleting consent:", error);
+      toast.error("Failed to delete consent request");
+    } finally {
+      setDeleting(false);
+      setDeleteDialogOpen(false);
+      setTokenToDelete(null);
     }
   };
 
@@ -344,20 +376,39 @@ const DonorConsents = ({ donorId, donorName = "Donor" }: DonorConsentsProps) => 
                             <XCircle className="h-4 w-4 mr-1" />
                             Revoke
                           </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:text-destructive"
+                            onClick={() => handleDeleteClick(group.token)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </>
                       )}
                       {canResend && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedTypes(group.consents.map(c => c.consent_type));
-                            setRequestDialogOpen(true);
-                          }}
-                        >
-                          <RotateCcw className="h-4 w-4 mr-1" />
-                          Resend
-                        </Button>
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedTypes(group.consents.map(c => c.consent_type));
+                              setRequestDialogOpen(true);
+                            }}
+                          >
+                            <RotateCcw className="h-4 w-4 mr-1" />
+                            Resend
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-destructive hover:text-destructive"
+                            onClick={() => handleDeleteClick(group.token)}
+                          >
+                            <Trash2 className="h-4 w-4 mr-1" />
+                            Delete
+                          </Button>
+                        </>
                       )}
                     </div>
                   </div>
@@ -457,6 +508,28 @@ const DonorConsents = ({ donorId, donorName = "Donor" }: DonorConsentsProps) => 
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleRevokeConfirm}>
               Revoke
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Consent Request</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to permanently delete this consent request? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteConfirm}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? "Deleting..." : "Delete"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
