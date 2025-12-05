@@ -297,12 +297,10 @@ const Donors = () => {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Donors</h1>
-          <p className="text-muted-foreground">
-            Manage donor records ({totalCount} total)
-          </p>
-        </div>
+        <h1 className="text-lg font-semibold flex items-center gap-2">
+          Donors
+          <Badge variant="secondary" className="font-normal">{totalCount}</Badge>
+        </h1>
         <Button onClick={() => setAddDialogOpen(true)}>
           <Plus className="mr-2 h-4 w-4" />
           Add Donor

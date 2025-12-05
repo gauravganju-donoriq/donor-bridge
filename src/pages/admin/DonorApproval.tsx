@@ -401,12 +401,10 @@ const DonorApproval = () => {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Donor Approval</h1>
-          <p className="text-muted-foreground">
-            Review and approve webform submissions ({totalCount} total)
-          </p>
-        </div>
+        <h1 className="text-lg font-semibold flex items-center gap-2">
+          Donor Approval
+          <Badge variant="secondary" className="font-normal">{totalCount}</Badge>
+        </h1>
         <Button
           variant="outline"
           onClick={handleBatchEvaluate}
@@ -469,13 +467,6 @@ const DonorApproval = () => {
 
       {/* Submissions Table */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <ClipboardCheck className="h-5 w-5" />
-            Submissions
-          </CardTitle>
-          <CardDescription>Click on a row to view details and take action</CardDescription>
-        </CardHeader>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <Table>
