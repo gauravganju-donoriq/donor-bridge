@@ -1,27 +1,34 @@
 import { useState, useEffect, useRef } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { CheckCircle, Loader2, AlertCircle, User } from "lucide-react";
+import { useParams } from "react-router-dom";
+import { CheckCircle, Loader2, AlertCircle, User, ChevronRight, ChevronLeft } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
 import { format, differenceInYears } from "date-fns";
 import SignaturePad, { SignaturePadRef } from "@/components/admin/donor-detail/SignaturePad";
 
-interface ConsentData {
+interface ConsentRecord {
   id: string;
   consent_type: string;
   status: string;
   token_expires_at: string;
-  donor: {
-    id: string;
-    donor_id: string;
-    first_name: string;
-    last_name: string;
-    birth_date: string;
-    assigned_sex: string;
-  };
+}
+
+interface DonorInfo {
+  id: string;
+  donor_id: string;
+  first_name: string;
+  last_name: string;
+  birth_date: string;
+  assigned_sex: string;
+}
+
+interface ConsentData {
+  consents: ConsentRecord[];
+  donor: DonorInfo;
 }
 
 const CONSENT_CONTENT: Record<string, { title: string; content: string[] }> = {
@@ -77,18 +84,19 @@ const CONSENT_CONTENT: Record<string, { title: string; content: string[] }> = {
 
 const ConsentForm = () => {
   const { token } = useParams<{ token: string }>();
-  const navigate = useNavigate();
   const signatureRef = useRef<SignaturePadRef>(null);
 
   const [loading, setLoading] = useState(true);
   const [consentData, setConsentData] = useState<ConsentData | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [acknowledged, setAcknowledged] = useState(false);
+  const [currentStep, setCurrentStep] = useState(0);
+  const [acknowledged, setAcknowledged] = useState<Record<string, boolean>>({});
+  const [signatures, setSignatures] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
+  const [completed, setCompleted] = useState(false);
 
   useEffect(() => {
-    const fetchConsent = async () => {
+    const fetchConsents = async () => {
       if (!token) {
         setError("Invalid consent link");
         setLoading(false);
@@ -96,37 +104,38 @@ const ConsentForm = () => {
       }
 
       try {
-        // Fetch consent with donor info
-        const { data: consent, error: consentError } = await supabase
+        // Fetch all consents with this token
+        const { data: consents, error: consentsError } = await supabase
           .from("donor_consents")
           .select("id, consent_type, status, token_expires_at, donor_id")
-          .eq("access_token", token)
-          .maybeSingle();
+          .eq("access_token", token);
 
-        if (consentError) throw consentError;
+        if (consentsError) throw consentsError;
 
-        if (!consent) {
+        if (!consents || consents.length === 0) {
           setError("Consent request not found or link has expired");
           setLoading(false);
           return;
         }
 
         // Check if expired
-        if (new Date(consent.token_expires_at) < new Date()) {
+        if (new Date(consents[0].token_expires_at) < new Date()) {
           setError("This consent link has expired. Please contact the clinic for a new link.");
           setLoading(false);
           return;
         }
 
-        // Check if already signed
-        if (consent.status === "signed") {
-          setError("This consent form has already been signed.");
+        // Check if all already signed
+        const allSigned = consents.every(c => c.status === "signed");
+        if (allSigned) {
+          setError("All consent forms have already been signed.");
           setLoading(false);
           return;
         }
 
-        // Check if revoked
-        if (consent.status === "revoked") {
+        // Check if any revoked
+        const anyRevoked = consents.some(c => c.status === "revoked");
+        if (anyRevoked) {
           setError("This consent request has been revoked. Please contact the clinic.");
           setLoading(false);
           return;
@@ -136,104 +145,158 @@ const ConsentForm = () => {
         const { data: donor, error: donorError } = await supabase
           .from("donors")
           .select("id, donor_id, first_name, last_name, birth_date, assigned_sex")
-          .eq("id", consent.donor_id)
+          .eq("id", consents[0].donor_id)
           .single();
 
         if (donorError) throw donorError;
 
+        // Filter to only pending consents
+        const pendingConsents = consents.filter(c => c.status === "pending");
+        
         setConsentData({
-          ...consent,
+          consents: pendingConsents,
           donor,
         });
       } catch (err) {
-        console.error("Error fetching consent:", err);
-        setError("Failed to load consent form. Please try again.");
+        console.error("Error fetching consents:", err);
+        setError("Failed to load consent forms. Please try again.");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchConsent();
+    fetchConsents();
   }, [token]);
 
-  const handleSubmit = async () => {
-    if (!consentData || !signatureRef.current || !token) return;
-
+  const handleSignatureCapture = () => {
+    if (!signatureRef.current || !consentData) return;
+    
     if (signatureRef.current.isEmpty()) {
+      return false;
+    }
+
+    const signatureDataUrl = signatureRef.current.getSignatureDataURL();
+    if (signatureDataUrl) {
+      const currentConsent = consentData.consents[currentStep];
+      setSignatures(prev => ({
+        ...prev,
+        [currentConsent.id]: signatureDataUrl,
+      }));
+      return true;
+    }
+    return false;
+  };
+
+  const handleNext = () => {
+    if (!consentData) return;
+
+    const currentConsent = consentData.consents[currentStep];
+    
+    // Check acknowledgment
+    if (!acknowledged[currentConsent.id]) {
       return;
     }
+
+    // Capture signature
+    if (!handleSignatureCapture()) {
+      return;
+    }
+
+    // Move to next step or submit
+    if (currentStep < consentData.consents.length - 1) {
+      setCurrentStep(prev => prev + 1);
+      // Reset signature pad for next form
+      setTimeout(() => {
+        signatureRef.current?.clear();
+      }, 100);
+    } else {
+      handleSubmit();
+    }
+  };
+
+  const handleBack = () => {
+    if (currentStep > 0) {
+      setCurrentStep(prev => prev - 1);
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!consentData || !token) return;
 
     setSubmitting(true);
 
     try {
-      const signatureDataUrl = signatureRef.current.getSignatureDataURL();
-      
-      // Generate HTML document
-      const consentContent = CONSENT_CONTENT[consentData.consent_type];
-      const htmlContent = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <title>${consentContent.title} - ${consentData.donor.first_name} ${consentData.donor.last_name}</title>
-          <style>
-            body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 40px; }
-            h1 { color: #333; border-bottom: 2px solid #333; padding-bottom: 10px; }
-            .donor-info { background: #f5f5f5; padding: 15px; border-radius: 8px; margin: 20px 0; }
-            .content { line-height: 1.8; }
-            .content li { margin: 10px 0; }
-            .signature-section { margin-top: 40px; border-top: 1px solid #ccc; padding-top: 20px; }
-            .signature-img { max-width: 300px; border-bottom: 1px solid #333; }
-            .date { margin-top: 10px; }
-          </style>
-        </head>
-        <body>
-          <h1>${consentContent.title}</h1>
-          <div class="donor-info">
-            <p><strong>Donor Name:</strong> ${consentData.donor.first_name} ${consentData.donor.last_name}</p>
-            <p><strong>Donor ID:</strong> ${consentData.donor.donor_id}</p>
-            <p><strong>Date of Birth:</strong> ${format(new Date(consentData.donor.birth_date), "MMMM d, yyyy")}</p>
-          </div>
-          <div class="content">
-            <ul>
-              ${consentContent.content.map(item => `<li>${item}</li>`).join('')}
-            </ul>
-          </div>
-          <div class="signature-section">
-            <p><strong>Electronic Signature:</strong></p>
-            <img src="${signatureDataUrl}" class="signature-img" alt="Signature" />
-            <p class="date"><strong>Signed on:</strong> ${format(new Date(), "MMMM d, yyyy 'at' h:mm a")}</p>
-          </div>
-        </body>
-        </html>
-      `;
+      // Process each consent
+      for (const consent of consentData.consents) {
+        const signatureDataUrl = signatures[consent.id];
+        const consentContent = CONSENT_CONTENT[consent.consent_type];
+        
+        // Generate HTML document
+        const htmlContent = `
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <title>${consentContent.title} - ${consentData.donor.first_name} ${consentData.donor.last_name}</title>
+            <style>
+              body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 40px; }
+              h1 { color: #333; border-bottom: 2px solid #333; padding-bottom: 10px; }
+              .donor-info { background: #f5f5f5; padding: 15px; border-radius: 8px; margin: 20px 0; }
+              .content { line-height: 1.8; }
+              .content li { margin: 10px 0; }
+              .signature-section { margin-top: 40px; border-top: 1px solid #ccc; padding-top: 20px; }
+              .signature-img { max-width: 300px; border-bottom: 1px solid #333; }
+              .date { margin-top: 10px; }
+            </style>
+          </head>
+          <body>
+            <h1>${consentContent.title}</h1>
+            <div class="donor-info">
+              <p><strong>Donor Name:</strong> ${consentData.donor.first_name} ${consentData.donor.last_name}</p>
+              <p><strong>Donor ID:</strong> ${consentData.donor.donor_id}</p>
+              <p><strong>Date of Birth:</strong> ${format(new Date(consentData.donor.birth_date), "MMMM d, yyyy")}</p>
+            </div>
+            <div class="content">
+              <ul>
+                ${consentContent.content.map(item => `<li>${item}</li>`).join('')}
+              </ul>
+            </div>
+            <div class="signature-section">
+              <p><strong>Electronic Signature:</strong></p>
+              <img src="${signatureDataUrl}" class="signature-img" alt="Signature" />
+              <p class="date"><strong>Signed on:</strong> ${format(new Date(), "MMMM d, yyyy 'at' h:mm a")}</p>
+            </div>
+          </body>
+          </html>
+        `;
 
-      // Upload HTML document to storage
-      const fileName = `${consentData.donor.id}/consent_${consentData.consent_type}_${Date.now()}.html`;
-      const blob = new Blob([htmlContent], { type: 'text/html' });
-      
-      const { error: uploadError } = await supabase.storage
-        .from("donor-documents")
-        .upload(fileName, blob);
+        // Upload HTML document to storage
+        const fileName = `${consentData.donor.id}/consent_${consent.consent_type}_${Date.now()}.html`;
+        const blob = new Blob([htmlContent], { type: 'text/html' });
+        
+        const { error: uploadError } = await supabase.storage
+          .from("donor-documents")
+          .upload(fileName, blob);
 
-      if (uploadError) throw uploadError;
+        if (uploadError) throw uploadError;
 
-      // Update consent record
-      const { error: updateError } = await supabase
-        .from("donor_consents")
-        .update({
-          status: "signed",
-          signed_at: new Date().toISOString(),
-          signature_data: signatureDataUrl,
-          signed_document_path: fileName,
-        })
-        .eq("access_token", token);
+        // Update consent record
+        const { error: updateError } = await supabase
+          .from("donor_consents")
+          .update({
+            status: "signed",
+            signed_at: new Date().toISOString(),
+            signature_data: signatureDataUrl,
+            signed_document_path: fileName,
+          })
+          .eq("id", consent.id);
 
-      if (updateError) throw updateError;
+        if (updateError) throw updateError;
+      }
 
-      setSubmitted(true);
+      setCompleted(true);
     } catch (err) {
-      console.error("Error submitting consent:", err);
-      setError("Failed to submit consent. Please try again.");
+      console.error("Error submitting consents:", err);
+      setError("Failed to submit consent forms. Please try again.");
     } finally {
       setSubmitting(false);
     }
@@ -253,7 +316,7 @@ const ConsentForm = () => {
         <Card className="max-w-md w-full">
           <CardContent className="pt-6 text-center">
             <AlertCircle className="h-12 w-12 mx-auto mb-4 text-destructive" />
-            <h2 className="text-lg font-semibold mb-2">Unable to Load Consent Form</h2>
+            <h2 className="text-lg font-semibold mb-2">Unable to Load Consent Forms</h2>
             <p className="text-muted-foreground">{error}</p>
           </CardContent>
         </Card>
@@ -261,15 +324,15 @@ const ConsentForm = () => {
     );
   }
 
-  if (submitted) {
+  if (completed) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-muted/30 p-4">
         <Card className="max-w-md w-full">
           <CardContent className="pt-6 text-center">
             <CheckCircle className="h-12 w-12 mx-auto mb-4 text-green-600" />
-            <h2 className="text-lg font-semibold mb-2">Consent Submitted</h2>
+            <h2 className="text-lg font-semibold mb-2">All Consent Forms Submitted</h2>
             <p className="text-muted-foreground">
-              Thank you for signing the consent form. Your submission has been recorded.
+              Thank you for signing all {consentData?.consents.length} consent form(s). Your submissions have been recorded.
             </p>
           </CardContent>
         </Card>
@@ -279,8 +342,11 @@ const ConsentForm = () => {
 
   if (!consentData) return null;
 
-  const consentContent = CONSENT_CONTENT[consentData.consent_type];
+  const currentConsent = consentData.consents[currentStep];
+  const consentContent = CONSENT_CONTENT[currentConsent.consent_type];
   const donorAge = differenceInYears(new Date(), new Date(consentData.donor.birth_date));
+  const progress = ((currentStep + 1) / consentData.consents.length) * 100;
+  const isLastStep = currentStep === consentData.consents.length - 1;
 
   return (
     <div className="min-h-screen bg-muted/30 py-8 px-4">
@@ -288,8 +354,41 @@ const ConsentForm = () => {
         {/* Header */}
         <div className="text-center">
           <h1 className="text-2xl font-bold">Lonza Donor Program</h1>
-          <Badge variant="secondary" className="mt-2">Consent Form</Badge>
+          <Badge variant="secondary" className="mt-2">Consent Forms</Badge>
         </div>
+
+        {/* Progress */}
+        {consentData.consents.length > 1 && (
+          <Card>
+            <CardContent className="pt-4 pb-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium">
+                  Form {currentStep + 1} of {consentData.consents.length}
+                </span>
+                <span className="text-sm text-muted-foreground">
+                  {Math.round(progress)}% complete
+                </span>
+              </div>
+              <Progress value={progress} className="h-2" />
+              <div className="flex gap-1 mt-3">
+                {consentData.consents.map((consent, index) => (
+                  <div
+                    key={consent.id}
+                    className={`flex-1 text-xs text-center py-1 px-2 rounded ${
+                      index === currentStep
+                        ? "bg-primary text-primary-foreground"
+                        : index < currentStep || signatures[consent.id]
+                        ? "bg-green-500/20 text-green-700"
+                        : "bg-muted text-muted-foreground"
+                    }`}
+                  >
+                    {CONSENT_CONTENT[consent.consent_type].title.replace(" Consent Form", "").replace(" Authorization", "")}
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Donor Info Card */}
         <Card>
@@ -348,31 +447,52 @@ const ConsentForm = () => {
             {/* Acknowledgment */}
             <div className="flex items-start gap-3 p-4 bg-muted/50 rounded-lg">
               <Checkbox
-                id="acknowledge"
-                checked={acknowledged}
-                onCheckedChange={(checked) => setAcknowledged(checked as boolean)}
+                id={`acknowledge-${currentConsent.id}`}
+                checked={acknowledged[currentConsent.id] || false}
+                onCheckedChange={(checked) => 
+                  setAcknowledged(prev => ({
+                    ...prev,
+                    [currentConsent.id]: checked as boolean,
+                  }))
+                }
               />
-              <label htmlFor="acknowledge" className="text-sm cursor-pointer">
+              <label htmlFor={`acknowledge-${currentConsent.id}`} className="text-sm cursor-pointer">
                 I have read and understood the above information. By signing below, I voluntarily consent to the terms described.
               </label>
             </div>
 
-            {/* Submit Button */}
-            <Button
-              className="w-full"
-              size="lg"
-              onClick={handleSubmit}
-              disabled={!acknowledged || submitting}
-            >
-              {submitting ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Submitting...
-                </>
-              ) : (
-                "Submit Consent"
-              )}
-            </Button>
+            {/* Navigation Buttons */}
+            <div className="flex justify-between pt-4">
+              <Button
+                variant="outline"
+                onClick={handleBack}
+                disabled={currentStep === 0 || submitting}
+              >
+                <ChevronLeft className="h-4 w-4 mr-1" />
+                Back
+              </Button>
+              <Button
+                onClick={handleNext}
+                disabled={!acknowledged[currentConsent.id] || submitting}
+              >
+                {submitting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Submitting...
+                  </>
+                ) : isLastStep ? (
+                  <>
+                    Submit All ({consentData.consents.length})
+                    <CheckCircle className="h-4 w-4 ml-1" />
+                  </>
+                ) : (
+                  <>
+                    Next Form
+                    <ChevronRight className="h-4 w-4 ml-1" />
+                  </>
+                )}
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>

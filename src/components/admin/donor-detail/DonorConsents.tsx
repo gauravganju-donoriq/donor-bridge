@@ -3,16 +3,19 @@ import { Copy, Link2, Eye, Loader2, ShieldCheck, Clock, CheckCircle, XCircle, Ro
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -40,6 +43,13 @@ interface Consent {
   created_at: string;
 }
 
+interface ConsentGroup {
+  token: string;
+  expiresAt: string;
+  createdAt: string;
+  consents: Consent[];
+}
+
 const CONSENT_TYPES = [
   { value: "hiv_testing", label: "HIV Testing Consent" },
   { value: "bone_marrow_donation", label: "Bone Marrow Donation Consent" },
@@ -53,8 +63,10 @@ const DonorConsents = ({ donorId, donorName = "Donor" }: DonorConsentsProps) => 
   const [consents, setConsents] = useState<Consent[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
+  const [requestDialogOpen, setRequestDialogOpen] = useState(false);
+  const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [revokeDialogOpen, setRevokeDialogOpen] = useState(false);
-  const [consentToRevoke, setConsentToRevoke] = useState<Consent | null>(null);
+  const [tokenToRevoke, setTokenToRevoke] = useState<string | null>(null);
 
   useEffect(() => {
     fetchConsents();
@@ -87,8 +99,8 @@ const DonorConsents = ({ donorId, donorName = "Donor" }: DonorConsentsProps) => 
     return token;
   };
 
-  const handleRequestConsent = async (consentType: string) => {
-    if (!user) return;
+  const handleRequestConsent = async () => {
+    if (!user || selectedTypes.length === 0) return;
 
     setCreating(true);
     try {
@@ -96,17 +108,22 @@ const DonorConsents = ({ donorId, donorName = "Donor" }: DonorConsentsProps) => 
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + 7); // 7 days expiry
 
-      const { error } = await supabase.from("donor_consents").insert({
+      // Create a consent record for each selected type with the same token
+      const records = selectedTypes.map(consentType => ({
         donor_id: donorId,
         consent_type: consentType,
         access_token: token,
         token_expires_at: expiresAt.toISOString(),
         created_by: user.id,
-      });
+      }));
+
+      const { error } = await supabase.from("donor_consents").insert(records);
 
       if (error) throw error;
 
-      toast.success("Consent request created");
+      toast.success(`Consent request created for ${selectedTypes.length} form(s)`);
+      setRequestDialogOpen(false);
+      setSelectedTypes([]);
       fetchConsents();
     } catch (error: any) {
       console.error("Error creating consent request:", error);
@@ -116,13 +133,13 @@ const DonorConsents = ({ donorId, donorName = "Donor" }: DonorConsentsProps) => 
     }
   };
 
-  const getConsentLink = (consent: Consent) => {
+  const getConsentLink = (token: string) => {
     const baseUrl = window.location.origin;
-    return `${baseUrl}/consent/${consent.access_token}`;
+    return `${baseUrl}/consent/${token}`;
   };
 
-  const handleCopyLink = (consent: Consent) => {
-    navigator.clipboard.writeText(getConsentLink(consent));
+  const handleCopyLink = (token: string) => {
+    navigator.clipboard.writeText(getConsentLink(token));
     toast.success("Link copied to clipboard");
   };
 
@@ -144,30 +161,30 @@ const DonorConsents = ({ donorId, donorName = "Donor" }: DonorConsentsProps) => 
     }
   };
 
-  const handleRevokeClick = (consent: Consent) => {
-    setConsentToRevoke(consent);
+  const handleRevokeClick = (token: string) => {
+    setTokenToRevoke(token);
     setRevokeDialogOpen(true);
   };
 
   const handleRevokeConfirm = async () => {
-    if (!consentToRevoke) return;
+    if (!tokenToRevoke) return;
 
     try {
       const { error } = await supabase
         .from("donor_consents")
         .update({ status: "revoked" })
-        .eq("id", consentToRevoke.id);
+        .eq("access_token", tokenToRevoke);
 
       if (error) throw error;
 
-      toast.success("Consent revoked");
+      toast.success("Consent request revoked");
       fetchConsents();
     } catch (error) {
       console.error("Error revoking consent:", error);
       toast.error("Failed to revoke consent");
     } finally {
       setRevokeDialogOpen(false);
-      setConsentToRevoke(null);
+      setTokenToRevoke(null);
     }
   };
 
@@ -175,44 +192,83 @@ const DonorConsents = ({ donorId, donorName = "Donor" }: DonorConsentsProps) => 
     return CONSENT_TYPES.find((t) => t.value === type)?.label || type;
   };
 
-  const getStatusBadge = (consent: Consent) => {
-    const isExpired = new Date(consent.token_expires_at) < new Date();
-    
-    if (consent.status === "signed") {
-      return (
-        <Badge className="bg-green-500/10 text-green-600">
-          <CheckCircle className="h-3 w-3 mr-1" />
-          Signed
-        </Badge>
-      );
-    }
-    if (consent.status === "revoked") {
-      return (
-        <Badge variant="destructive">
-          <XCircle className="h-3 w-3 mr-1" />
-          Revoked
-        </Badge>
-      );
-    }
-    if (isExpired) {
-      return (
-        <Badge variant="secondary">
-          <Clock className="h-3 w-3 mr-1" />
-          Expired
-        </Badge>
-      );
-    }
-    return (
-      <Badge className="bg-yellow-500/10 text-yellow-600">
-        <Clock className="h-3 w-3 mr-1" />
-        Pending
-      </Badge>
+  const toggleConsentType = (type: string) => {
+    setSelectedTypes(prev => 
+      prev.includes(type) 
+        ? prev.filter(t => t !== type)
+        : [...prev, type]
     );
   };
 
-  // Get latest consent by type
-  const getLatestConsentByType = (type: string) => {
-    return consents.find((c) => c.consent_type === type);
+  // Group consents by access_token
+  const groupedConsents = consents.reduce<ConsentGroup[]>((groups, consent) => {
+    const existing = groups.find(g => g.token === consent.access_token);
+    if (existing) {
+      existing.consents.push(consent);
+    } else {
+      groups.push({
+        token: consent.access_token,
+        expiresAt: consent.token_expires_at,
+        createdAt: consent.created_at,
+        consents: [consent],
+      });
+    }
+    return groups;
+  }, []);
+
+  const getGroupStatus = (group: ConsentGroup) => {
+    const allSigned = group.consents.every(c => c.status === "signed");
+    const anyRevoked = group.consents.some(c => c.status === "revoked");
+    const isExpired = new Date(group.expiresAt) < new Date();
+    const signedCount = group.consents.filter(c => c.status === "signed").length;
+    
+    if (allSigned) return { status: "signed", label: "All Signed" };
+    if (anyRevoked) return { status: "revoked", label: "Revoked" };
+    if (isExpired) return { status: "expired", label: "Expired" };
+    if (signedCount > 0) return { status: "partial", label: `${signedCount}/${group.consents.length} Signed` };
+    return { status: "pending", label: "Pending" };
+  };
+
+  const getStatusBadge = (group: ConsentGroup) => {
+    const { status, label } = getGroupStatus(group);
+    
+    switch (status) {
+      case "signed":
+        return (
+          <Badge className="bg-green-500/10 text-green-600">
+            <CheckCircle className="h-3 w-3 mr-1" />
+            {label}
+          </Badge>
+        );
+      case "revoked":
+        return (
+          <Badge variant="destructive">
+            <XCircle className="h-3 w-3 mr-1" />
+            {label}
+          </Badge>
+        );
+      case "expired":
+        return (
+          <Badge variant="secondary">
+            <Clock className="h-3 w-3 mr-1" />
+            {label}
+          </Badge>
+        );
+      case "partial":
+        return (
+          <Badge className="bg-blue-500/10 text-blue-600">
+            <CheckCircle className="h-3 w-3 mr-1" />
+            {label}
+          </Badge>
+        );
+      default:
+        return (
+          <Badge className="bg-yellow-500/10 text-yellow-600">
+            <Clock className="h-3 w-3 mr-1" />
+            {label}
+          </Badge>
+        );
+    }
   };
 
   if (loading) {
@@ -231,31 +287,13 @@ const DonorConsents = ({ donorId, donorName = "Donor" }: DonorConsentsProps) => 
         <CardTitle className="text-base font-semibold">
           Consent Forms
         </CardTitle>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button size="sm" disabled={creating}>
-              {creating ? (
-                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-              ) : (
-                <Link2 className="h-4 w-4 mr-1" />
-              )}
-              Request Consent
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            {CONSENT_TYPES.map((type) => (
-              <DropdownMenuItem
-                key={type.value}
-                onClick={() => handleRequestConsent(type.value)}
-              >
-                {type.label}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <Button size="sm" onClick={() => setRequestDialogOpen(true)}>
+          <Link2 className="h-4 w-4 mr-1" />
+          Request Consent
+        </Button>
       </CardHeader>
       <CardContent>
-        {consents.length === 0 ? (
+        {groupedConsents.length === 0 ? (
           <div className="text-center py-10 border-2 border-dashed rounded-lg">
             <ShieldCheck className="h-10 w-10 mx-auto mb-3 text-muted-foreground opacity-50" />
             <p className="text-sm font-medium mb-1">No Consent Forms</p>
@@ -264,73 +302,95 @@ const DonorConsents = ({ donorId, donorName = "Donor" }: DonorConsentsProps) => 
             </p>
           </div>
         ) : (
-          <div className="space-y-3">
-            {consents.map((consent) => {
-              const isExpired = new Date(consent.token_expires_at) < new Date();
-              const isPending = consent.status === "pending" && !isExpired;
+          <div className="space-y-4">
+            {groupedConsents.map((group) => {
+              const { status } = getGroupStatus(group);
+              const isPending = status === "pending" || status === "partial";
+              const canResend = status === "revoked" || status === "expired";
               
               return (
                 <div
-                  key={consent.id}
-                  className="flex items-center justify-between p-4 border rounded-lg bg-muted/30"
+                  key={group.token}
+                  className="p-4 border rounded-lg bg-muted/30"
                 >
-                  <div className="space-y-1">
+                  <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
-                      <p className="text-sm font-medium">
-                        {getConsentTypeLabel(consent.consent_type)}
-                      </p>
-                      {getStatusBadge(consent)}
+                      {getStatusBadge(group)}
+                      <span className="text-xs text-muted-foreground">
+                        {status === "signed" 
+                          ? `Signed ${format(new Date(group.consents[0].signed_at!), "MMM d, yyyy")}`
+                          : isPending
+                          ? `Expires ${format(new Date(group.expiresAt), "MMM d, yyyy")}`
+                          : `Created ${format(new Date(group.createdAt), "MMM d, yyyy")}`}
+                      </span>
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      {consent.status === "signed" && consent.signed_at
-                        ? `Signed on ${format(new Date(consent.signed_at), "MMM d, yyyy 'at' h:mm a")}`
-                        : isPending
-                        ? `Expires ${format(new Date(consent.token_expires_at), "MMM d, yyyy")}`
-                        : `Created ${format(new Date(consent.created_at), "MMM d, yyyy")}`}
-                    </p>
+                    <div className="flex items-center gap-1">
+                      {isPending && (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleCopyLink(group.token)}
+                          >
+                            <Copy className="h-4 w-4 mr-1" />
+                            Copy Link
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-destructive hover:text-destructive"
+                            onClick={() => handleRevokeClick(group.token)}
+                          >
+                            <XCircle className="h-4 w-4 mr-1" />
+                            Revoke
+                          </Button>
+                        </>
+                      )}
+                      {canResend && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedTypes(group.consents.map(c => c.consent_type));
+                            setRequestDialogOpen(true);
+                          }}
+                        >
+                          <RotateCcw className="h-4 w-4 mr-1" />
+                          Resend
+                        </Button>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1">
-                    {consent.status === "signed" && consent.signed_document_path && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleViewDocument(consent)}
+                  
+                  {/* List of consent types in this group */}
+                  <div className="space-y-2">
+                    {group.consents.map((consent) => (
+                      <div 
+                        key={consent.id}
+                        className="flex items-center justify-between py-2 px-3 bg-background rounded border"
                       >
-                        <Eye className="h-4 w-4 mr-1" />
-                        View
-                      </Button>
-                    )}
-                    {isPending && (
-                      <>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleCopyLink(consent)}
-                        >
-                          <Copy className="h-4 w-4 mr-1" />
-                          Copy Link
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-destructive hover:text-destructive"
-                          onClick={() => handleRevokeClick(consent)}
-                        >
-                          <XCircle className="h-4 w-4 mr-1" />
-                          Revoke
-                        </Button>
-                      </>
-                    )}
-                    {(consent.status === "revoked" || isExpired) && consent.status !== "signed" && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleRequestConsent(consent.consent_type)}
-                      >
-                        <RotateCcw className="h-4 w-4 mr-1" />
-                        Resend
-                      </Button>
-                    )}
+                        <div className="flex items-center gap-2">
+                          {consent.status === "signed" ? (
+                            <CheckCircle className="h-4 w-4 text-green-600" />
+                          ) : (
+                            <Clock className="h-4 w-4 text-muted-foreground" />
+                          )}
+                          <span className="text-sm">
+                            {getConsentTypeLabel(consent.consent_type)}
+                          </span>
+                        </div>
+                        {consent.status === "signed" && consent.signed_document_path && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleViewDocument(consent)}
+                          >
+                            <Eye className="h-4 w-4 mr-1" />
+                            View
+                          </Button>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 </div>
               );
@@ -339,12 +399,58 @@ const DonorConsents = ({ donorId, donorName = "Donor" }: DonorConsentsProps) => 
         )}
       </CardContent>
 
+      {/* Request Consent Dialog */}
+      <Dialog open={requestDialogOpen} onOpenChange={setRequestDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Request Consent Forms</DialogTitle>
+            <DialogDescription>
+              Select the consent forms required for {donorName}. A single link will be generated for all selected forms.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-3 py-4">
+            {CONSENT_TYPES.map((type) => (
+              <div
+                key={type.value}
+                className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-muted/50 cursor-pointer"
+                onClick={() => toggleConsentType(type.value)}
+              >
+                <Checkbox
+                  checked={selectedTypes.includes(type.value)}
+                  onCheckedChange={() => toggleConsentType(type.value)}
+                />
+                <span className="text-sm font-medium">{type.label}</span>
+              </div>
+            ))}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRequestDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleRequestConsent} 
+              disabled={selectedTypes.length === 0 || creating}
+            >
+              {creating ? (
+                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+              ) : (
+                <Link2 className="h-4 w-4 mr-1" />
+              )}
+              Generate Link ({selectedTypes.length})
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Revoke Confirmation Dialog */}
       <AlertDialog open={revokeDialogOpen} onOpenChange={setRevokeDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Revoke Consent Request</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to revoke this consent request? The link will no longer work.
+              Are you sure you want to revoke this consent request? The link will no longer work for any of the forms.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
