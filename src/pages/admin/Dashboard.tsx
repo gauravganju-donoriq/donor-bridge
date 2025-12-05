@@ -9,6 +9,7 @@ import {
   Clock,
   CheckCircle,
   AlertCircle,
+  CalendarClock,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -26,7 +27,7 @@ import {
   Pie,
   Cell,
 } from "recharts";
-import { format, subDays, startOfDay, endOfDay } from "date-fns";
+import { format, subDays, startOfDay, endOfDay, addWeeks } from "date-fns";
 
 interface DashboardMetrics {
   totalDonors: number;
@@ -51,6 +52,14 @@ interface ChartData {
   appointments: number;
 }
 
+interface UpcomingEligibleDonor {
+  id: string;
+  first_name: string;
+  last_name: string;
+  donor_id: string;
+  next_eligible_date: string;
+}
+
 const COLORS = ["hsl(var(--primary))", "hsl(var(--muted-foreground))", "hsl(var(--destructive))"];
 
 const Dashboard = () => {
@@ -65,6 +74,7 @@ const Dashboard = () => {
   });
   const [recentActivity, setRecentActivity] = useState<ActivityLog[]>([]);
   const [weeklyData, setWeeklyData] = useState<ChartData[]>([]);
+  const [upcomingEligible, setUpcomingEligible] = useState<UpcomingEligibleDonor[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -136,6 +146,19 @@ const Dashboard = () => {
           });
         }
 
+        // Fetch donors becoming eligible within next 2 weeks
+        const today = new Date().toISOString().split('T')[0];
+        const twoWeeksFromNow = addWeeks(new Date(), 2).toISOString().split('T')[0];
+        
+        const { data: upcomingEligibleDonors } = await supabase
+          .from("donors")
+          .select("id, first_name, last_name, donor_id, next_eligible_date")
+          .eq("eligibility_status", "temporarily_deferred" as any)
+          .gte("next_eligible_date", today)
+          .lte("next_eligible_date", twoWeeksFromNow)
+          .order("next_eligible_date", { ascending: true })
+          .limit(10);
+
         setMetrics({
           totalDonors: totalDonors || 0,
           pendingApprovals: pendingApprovals || 0,
@@ -146,6 +169,7 @@ const Dashboard = () => {
         });
         setRecentActivity(activityLogs || []);
         setWeeklyData(weeklyChartData);
+        setUpcomingEligible(upcomingEligibleDonors || []);
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
       } finally {
@@ -364,8 +388,8 @@ const Dashboard = () => {
         </Card>
       </div>
 
-      {/* Recent Activity & Quick Actions */}
-      <div className="grid gap-4 md:grid-cols-2">
+      {/* Recent Activity, Quick Actions & Upcoming Eligible */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {/* Recent Activity */}
         <Card>
           <CardHeader>
@@ -403,6 +427,47 @@ const Dashboard = () => {
             >
               View All Logs
             </Button>
+          </CardContent>
+        </Card>
+
+        {/* Upcoming Eligible Donors */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CalendarClock className="h-5 w-5 text-green-500" />
+              Becoming Eligible Soon
+            </CardTitle>
+            <CardDescription>Donors eligible within 2 weeks</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {upcomingEligible.length > 0 ? (
+              <div className="space-y-3">
+                {upcomingEligible.map((donor) => (
+                  <div
+                    key={donor.id}
+                    className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
+                    onClick={() => navigate(`/admin/donors/${donor.id}`)}
+                  >
+                    <div>
+                      <p className="text-sm font-medium">
+                        {donor.first_name} {donor.last_name}
+                      </p>
+                      <p className="text-xs text-muted-foreground font-mono">
+                        {donor.donor_id}
+                      </p>
+                    </div>
+                    <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50">
+                      {format(new Date(donor.next_eligible_date), "MMM d")}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <CalendarClock className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                <p>No donors becoming eligible soon</p>
+              </div>
+            )}
           </CardContent>
         </Card>
 
