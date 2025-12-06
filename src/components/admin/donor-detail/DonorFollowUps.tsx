@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Phone, Mail, CheckCircle, AlertCircle, Clock, Pencil, Plus, ChevronDown, ChevronRight, Check, X } from "lucide-react";
+import { Phone, Mail, CheckCircle, AlertCircle, Clock, Pencil, Plus, ChevronDown, ChevronRight, Check, X, Bot, Play, Pause } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -46,6 +46,14 @@ interface FollowUp {
   notes: string | null;
   completed_at: string | null;
   created_at: string;
+  // AI Call fields
+  ai_call_id: string | null;
+  ai_call_status: string | null;
+  ai_transcript: string | null;
+  ai_recording_url: string | null;
+  ai_call_duration_ms: number | null;
+  ai_called_at: string | null;
+  ai_parsed_responses: unknown;
   appointment?: {
     appointment_date: string;
     donor_letter: string | null;
@@ -339,7 +347,9 @@ const DonorFollowUps = ({ donorId, donorName }: DonorFollowUpsProps) => {
                     followUp.signs_of_infection !== null ||
                     followUp.unusual_symptoms !== null ||
                     followUp.procedure_feedback ||
-                    followUp.notes
+                    followUp.notes ||
+                    followUp.ai_transcript ||
+                    followUp.ai_call_id
                   );
 
                   return (
@@ -463,6 +473,68 @@ const DonorFollowUps = ({ donorId, donorName }: DonorFollowUpsProps) => {
                                 <div className="pt-2">
                                   <div className="text-sm text-muted-foreground">Notes:</div>
                                   <div className="text-sm">{followUp.notes}</div>
+                                </div>
+                              )}
+
+                              {/* AI Call Details Section */}
+                              {followUp.ai_call_id && (
+                                <div className="pt-4 mt-4 border-t">
+                                  <div className="flex items-center gap-2 mb-3">
+                                    <Bot className="h-4 w-4 text-primary" />
+                                    <span className="text-xs font-medium text-muted-foreground">AI CALL DETAILS</span>
+                                    {followUp.ai_call_status && (
+                                      <Badge variant={followUp.ai_call_status === "completed" ? "default" : "secondary"} className="text-xs">
+                                        {followUp.ai_call_status}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  
+                                  <div className="grid grid-cols-2 gap-4 mb-3 text-sm">
+                                    {followUp.ai_called_at && (
+                                      <div>
+                                        <span className="text-muted-foreground">Called:</span>{" "}
+                                        {format(parseISO(followUp.ai_called_at), "MMM d, yyyy h:mm a")}
+                                      </div>
+                                    )}
+                                    {followUp.ai_call_duration_ms && (
+                                      <div>
+                                        <span className="text-muted-foreground">Duration:</span>{" "}
+                                        {Math.round(followUp.ai_call_duration_ms / 1000)}s
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  {followUp.ai_recording_url && (
+                                    <div className="mb-3">
+                                      <div className="text-sm text-muted-foreground mb-1">Recording:</div>
+                                      <audio controls className="w-full h-10" src={followUp.ai_recording_url}>
+                                        Your browser does not support audio playback.
+                                      </audio>
+                                    </div>
+                                  )}
+
+                                  {followUp.ai_transcript && (
+                                    <div className="mb-3">
+                                      <div className="text-sm text-muted-foreground mb-1">Transcript:</div>
+                                      <div className="bg-muted/50 rounded-md p-3 text-sm max-h-48 overflow-y-auto whitespace-pre-wrap">
+                                        {followUp.ai_transcript}
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {followUp.ai_parsed_responses && typeof followUp.ai_parsed_responses === 'object' && Object.keys(followUp.ai_parsed_responses as Record<string, unknown>).length > 0 && (
+                                    <div>
+                                      <div className="text-sm text-muted-foreground mb-1">Parsed Responses:</div>
+                                      <div className="bg-muted/50 rounded-md p-3 text-sm">
+                                        {Object.entries(followUp.ai_parsed_responses as Record<string, unknown>).map(([key, value]) => (
+                                          <div key={key} className="flex gap-2">
+                                            <span className="text-muted-foreground capitalize">{key.replace(/_/g, " ")}:</span>
+                                            <span>{String(value)}</span>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
                               )}
 
