@@ -66,6 +66,15 @@ const FollowUpsDashboard = () => {
     checkVoiceAiEnabled();
   }, []);
 
+  // Auto-refresh polling every 10 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchFollowUps();
+    }, 10000);
+
+    return () => clearInterval(interval);
+  }, []);
+
   const fetchFollowUps = async () => {
     try {
       const { data, error } = await supabase
