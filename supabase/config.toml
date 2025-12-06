@@ -2,3 +2,9 @@ project_id = "iwavtnwcwlfjhtcgfpho"
 
 [functions.evaluate-submission]
 verify_jwt = true
+
+[functions.retell-initiate-call]
+verify_jwt = true
+
+[functions.retell-webhook]
+verify_jwt = false

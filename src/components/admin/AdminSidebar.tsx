@@ -34,8 +34,11 @@ const navItems = [
   { to: "/admin/reports", label: "Reports", icon: FileText },
 ];
 
+import { Mic } from "lucide-react";
+
 const settingsItems = [
   { to: "/admin/screening-rules", label: "Screening Rules", icon: Brain },
+  { to: "/admin/voice-ai-settings", label: "Voice AI", icon: Mic },
 ];
 
 const adminItems = [

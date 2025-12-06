@@ -25,6 +25,7 @@ import Reports from "./pages/admin/Reports";
 import Users from "./pages/admin/Users";
 import Logs from "./pages/admin/Logs";
 import ScreeningRules from "./pages/admin/ScreeningRules";
+import VoiceAISettings from "./pages/admin/VoiceAISettings";
 
 const queryClient = new QueryClient();
 
@@ -71,6 +72,7 @@ const App = () => (
                 />
               <Route path="logs" element={<Logs />} />
               <Route path="screening-rules" element={<ScreeningRules />} />
+              <Route path="voice-ai-settings" element={<VoiceAISettings />} />
             </Route>
 
             {/* Catch-all */}
