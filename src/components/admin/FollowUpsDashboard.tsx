@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Phone, User, Calendar, Clock, AlertCircle, CheckCircle2, Mail, Bot, Loader2, Eye, PhoneMissed } from "lucide-react";
+import { Phone, User, Calendar, Clock, AlertCircle, CheckCircle2, Mail, Bot, Loader2, Eye, PhoneMissed, RotateCcw } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -445,7 +445,28 @@ const FollowUpsDashboard = () => {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
+                          {/* Show Retry button for failed calls or callback requested */}
                           {voiceAiEnabled && followUp.donors?.cell_phone && (
+                            followUp.ai_call_status === "failed" || 
+                            (followUp.ai_call_status === "completed" && 
+                              followUp.ai_parsed_responses && 
+                              (followUp.ai_parsed_responses as Record<string, unknown>).call_successful === false)
+                          ) ? (
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => handleAiCall(followUp)}
+                              disabled={isAiCalling}
+                              className="text-amber-600 border-amber-500 hover:bg-amber-50"
+                            >
+                              {isAiCalling ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <RotateCcw className="h-4 w-4 mr-1" />
+                              )}
+                              {!isAiCalling && "Retry"}
+                            </Button>
+                          ) : voiceAiEnabled && followUp.donors?.cell_phone && !followUp.ai_call_id ? (
                             <Button 
                               size="sm" 
                               variant="outline"
@@ -458,7 +479,7 @@ const FollowUpsDashboard = () => {
                                 <Bot className="h-4 w-4" />
                               )}
                             </Button>
-                          )}
+                          ) : null}
                           {followUp.ai_call_status === "completed" && (
                             <Button 
                               size="sm" 
