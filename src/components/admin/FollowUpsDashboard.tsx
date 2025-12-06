@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Phone, User, Calendar, Clock, AlertCircle, CheckCircle2, Mail, Bot, Loader2, Eye } from "lucide-react";
+import { Phone, User, Calendar, Clock, AlertCircle, CheckCircle2, Mail, Bot, Loader2, Eye, PhoneMissed } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -246,7 +246,22 @@ const FollowUpsDashboard = () => {
     }
   };
 
-  const getAiCallBadge = (status: string | null) => {
+  const getAiCallBadge = (followUp: FollowUpWithDetails) => {
+    const status = followUp.ai_call_status;
+    
+    // Check if callback was requested (call completed but donor asked to call back)
+    if (status === "completed" && followUp.ai_parsed_responses) {
+      const parsed = followUp.ai_parsed_responses as Record<string, unknown>;
+      if (parsed.call_successful === false) {
+        return (
+          <Badge variant="outline" className="border-amber-500 text-amber-600">
+            <PhoneMissed className="h-3 w-3 mr-1" />
+            Callback Requested
+          </Badge>
+        );
+      }
+    }
+    
     switch (status) {
       case "initiated":
       case "in_progress":
@@ -266,7 +281,8 @@ const FollowUpsDashboard = () => {
       case "failed":
         return (
           <Badge variant="destructive">
-            Failed
+            <AlertCircle className="h-3 w-3 mr-1" />
+            AI Failed
           </Badge>
         );
       default:
@@ -425,7 +441,7 @@ const FollowUpsDashboard = () => {
                         {getStatusBadge(followUp.status)}
                       </TableCell>
                       <TableCell>
-                        {getAiCallBadge(followUp.ai_call_status)}
+                        {getAiCallBadge(followUp)}
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
