@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Phone, Mail, CheckCircle, AlertCircle, Clock, Pencil, Plus, ChevronDown, ChevronRight, Check, X, Bot, Play, Pause } from "lucide-react";
+import { Phone, Mail, CheckCircle, AlertCircle, Clock, Pencil, Plus, ChevronDown, ChevronRight, Check, X, Bot, Play, Pause, RotateCcw, Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -79,6 +79,7 @@ const DonorFollowUps = ({ donorId, donorName }: DonorFollowUpsProps) => {
   const [availableAppointments, setAvailableAppointments] = useState<AvailableAppointment[]>([]);
   const [addPopoverOpen, setAddPopoverOpen] = useState(false);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  const [retryingCallId, setRetryingCallId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchFollowUps();
@@ -212,6 +213,53 @@ const DonorFollowUps = ({ donorId, donorName }: DonorFollowUpsProps) => {
   const handleSuccess = () => {
     fetchFollowUps();
     fetchAvailableAppointments();
+  };
+
+  const handleRetryAiCall = async (followUpId: string) => {
+    setRetryingCallId(followUpId);
+    try {
+      const { data, error } = await supabase.functions.invoke('retell-initiate-call', {
+        body: { follow_up_id: followUpId }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "AI Call Initiated",
+        description: "The AI is now calling the donor.",
+      });
+
+      // Refresh to show updated status
+      fetchFollowUps();
+    } catch (error) {
+      console.error("Error initiating AI call:", error);
+      toast({
+        title: "Error",
+        description: "Failed to initiate AI call. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setRetryingCallId(null);
+    }
+  };
+
+  const shouldShowRetryButton = (followUp: FollowUp): boolean => {
+    // Show retry if follow-up is not completed
+    if (followUp.status === "completed") return false;
+    
+    // Show if no AI call has been made yet
+    if (!followUp.ai_call_id) return true;
+    
+    // Show if AI call failed
+    if (followUp.ai_call_status === "failed") return true;
+    
+    // Show if donor asked to call back (ai_parsed_responses.call_successful === false)
+    if (followUp.ai_parsed_responses && typeof followUp.ai_parsed_responses === 'object') {
+      const parsed = followUp.ai_parsed_responses as Record<string, unknown>;
+      if (parsed.call_successful === false) return true;
+    }
+    
+    return false;
   };
 
   const YesNoDisplay = ({ value, details, label }: { value: boolean | null; details?: string | null; label: string }) => {
@@ -408,7 +456,24 @@ const DonorFollowUps = ({ donorId, donorName }: DonorFollowUpsProps) => {
                                 <Badge variant="destructive">Won't Donate</Badge>
                               )}
                             </div>
-                            <div className="text-right">
+                            <div className="text-right flex items-center gap-2 justify-end">
+                              {/* AI Call button for pending follow-ups */}
+                              {followUp.status !== "completed" && shouldShowRetryButton(followUp) && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleRetryAiCall(followUp.id)}
+                                  disabled={retryingCallId === followUp.id}
+                                  className="text-primary"
+                                >
+                                  {retryingCallId === followUp.id ? (
+                                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                                  ) : (
+                                    <Bot className="h-4 w-4 mr-1" />
+                                  )}
+                                  {followUp.ai_call_id ? "Retry" : "AI Call"}
+                                </Button>
+                              )}
                               {followUp.status === "completed" ? (
                                 <Button
                                   size="sm"
@@ -479,13 +544,30 @@ const DonorFollowUps = ({ donorId, donorName }: DonorFollowUpsProps) => {
                               {/* AI Call Details Section */}
                               {followUp.ai_call_id && (
                                 <div className="pt-4 mt-4 border-t">
-                                  <div className="flex items-center gap-2 mb-3">
-                                    <Bot className="h-4 w-4 text-primary" />
-                                    <span className="text-xs font-medium text-muted-foreground">AI CALL DETAILS</span>
-                                    {followUp.ai_call_status && (
-                                      <Badge variant={followUp.ai_call_status === "completed" ? "default" : "secondary"} className="text-xs">
-                                        {followUp.ai_call_status}
-                                      </Badge>
+                                  <div className="flex items-center justify-between mb-3">
+                                    <div className="flex items-center gap-2">
+                                      <Bot className="h-4 w-4 text-primary" />
+                                      <span className="text-xs font-medium text-muted-foreground">AI CALL DETAILS</span>
+                                      {followUp.ai_call_status && (
+                                        <Badge variant={followUp.ai_call_status === "completed" ? "default" : "secondary"} className="text-xs">
+                                          {followUp.ai_call_status}
+                                        </Badge>
+                                      )}
+                                    </div>
+                                    {shouldShowRetryButton(followUp) && (
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => handleRetryAiCall(followUp.id)}
+                                        disabled={retryingCallId === followUp.id}
+                                      >
+                                        {retryingCallId === followUp.id ? (
+                                          <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                                        ) : (
+                                          <RotateCcw className="h-4 w-4 mr-1" />
+                                        )}
+                                        Retry AI Call
+                                      </Button>
                                     )}
                                   </div>
                                   
