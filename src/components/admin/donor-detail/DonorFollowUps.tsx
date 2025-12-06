@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Phone, Mail, CheckCircle, AlertCircle, Clock, Pencil, Plus, ChevronDown, ChevronRight, Check, X, Bot, Play, Pause, RotateCcw, Loader2 } from "lucide-react";
+import { Phone, Mail, CheckCircle, AlertCircle, Clock, Pencil, Plus, ChevronDown, ChevronRight, Check, X, Bot, Play, Pause, RotateCcw, Loader2, PhoneMissed } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -155,6 +155,55 @@ const DonorFollowUps = ({ donorId, donorName }: DonorFollowUpsProps) => {
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
+  };
+
+  const getAiCallBadge = (followUp: FollowUp) => {
+    if (!followUp.ai_call_id) return null;
+    
+    // Check if callback was requested (call completed but donor asked to call back)
+    if (followUp.ai_call_status === "completed" && followUp.ai_parsed_responses) {
+      const parsed = followUp.ai_parsed_responses as Record<string, unknown>;
+      if (parsed.call_successful === false) {
+        return (
+          <Badge variant="outline" className="border-amber-500 text-amber-600">
+            <PhoneMissed className="h-3 w-3 mr-1" />
+            Callback Requested
+          </Badge>
+        );
+      }
+    }
+    
+    // AI call failed
+    if (followUp.ai_call_status === "failed") {
+      return (
+        <Badge variant="destructive">
+          <AlertCircle className="h-3 w-3 mr-1" />
+          AI Call Failed
+        </Badge>
+      );
+    }
+    
+    // AI call in progress
+    if (followUp.ai_call_status === "in_progress" || followUp.ai_call_status === "calling") {
+      return (
+        <Badge variant="secondary">
+          <Phone className="h-3 w-3 mr-1 animate-pulse" />
+          Calling...
+        </Badge>
+      );
+    }
+    
+    // AI call completed successfully
+    if (followUp.ai_call_status === "completed") {
+      return (
+        <Badge className="bg-primary/10 text-primary">
+          <Bot className="h-3 w-3 mr-1" />
+          AI Completed
+        </Badge>
+      );
+    }
+    
+    return null;
   };
 
   const handleOpenDialog = (followUp: FollowUp) => {
@@ -433,7 +482,10 @@ const DonorFollowUps = ({ donorId, donorName }: DonorFollowUpsProps) => {
                                 <Badge variant="outline" className="ml-2">{followUp.appointment.donor_letter}</Badge>
                               )}
                             </div>
-                            <div>{getStatusBadge(followUp.status)}</div>
+                            <div className="flex items-center gap-2">
+                              {getStatusBadge(followUp.status)}
+                              {getAiCallBadge(followUp)}
+                            </div>
                             <div className="text-sm">
                               {followUp.pain_level ? (
                                 <span>Pain: {followUp.pain_level}→{followUp.current_pain_level || "?"}</span>
