@@ -64,15 +64,27 @@ const FollowUpsDashboard = () => {
   useEffect(() => {
     fetchFollowUps();
     checkVoiceAiEnabled();
-  }, []);
 
-  // Auto-refresh polling every 10 seconds
-  useEffect(() => {
-    const interval = setInterval(() => {
-      fetchFollowUps();
-    }, 10000);
+    // Subscribe to realtime updates on follow_ups table
+    const channel = supabase
+      .channel('follow_ups_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'follow_ups',
+        },
+        () => {
+          // Refetch on any change
+          fetchFollowUps();
+        }
+      )
+      .subscribe();
 
-    return () => clearInterval(interval);
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const fetchFollowUps = async () => {
