@@ -482,6 +482,14 @@ export type Database = {
       }
       follow_ups: {
         Row: {
+          ai_call_duration_ms: number | null
+          ai_call_id: string | null
+          ai_call_status: string | null
+          ai_call_summary: Json | null
+          ai_called_at: string | null
+          ai_parsed_responses: Json | null
+          ai_recording_url: string | null
+          ai_transcript: string | null
           appointment_id: string
           aspiration_sites_notes: string | null
           checked_aspiration_sites: boolean | null
@@ -508,6 +516,14 @@ export type Database = {
           would_donate_again: boolean | null
         }
         Insert: {
+          ai_call_duration_ms?: number | null
+          ai_call_id?: string | null
+          ai_call_status?: string | null
+          ai_call_summary?: Json | null
+          ai_called_at?: string | null
+          ai_parsed_responses?: Json | null
+          ai_recording_url?: string | null
+          ai_transcript?: string | null
           appointment_id: string
           aspiration_sites_notes?: string | null
           checked_aspiration_sites?: boolean | null
@@ -534,6 +550,14 @@ export type Database = {
           would_donate_again?: boolean | null
         }
         Update: {
+          ai_call_duration_ms?: number | null
+          ai_call_id?: string | null
+          ai_call_status?: string | null
+          ai_call_summary?: Json | null
+          ai_called_at?: string | null
+          ai_parsed_responses?: Json | null
+          ai_recording_url?: string | null
+          ai_transcript?: string | null
           appointment_id?: string
           aspiration_sites_notes?: string | null
           checked_aspiration_sites?: boolean | null
@@ -857,6 +881,33 @@ export type Database = {
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
+        }
+        Relationships: []
+      }
+      voice_ai_settings: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          setting_key: string
+          setting_value: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          setting_key: string
+          setting_value: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          setting_key?: string
+          setting_value?: string
+          updated_at?: string
         }
         Relationships: []
       }

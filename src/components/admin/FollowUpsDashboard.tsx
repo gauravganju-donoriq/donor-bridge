@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Phone, User, Calendar, Clock, AlertCircle, CheckCircle2, Mail } from "lucide-react";
+import { Phone, User, Calendar, Clock, AlertCircle, CheckCircle2, Mail, Bot, Loader2, Eye } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -15,7 +15,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { format, parseISO, differenceInDays } from "date-fns";
+import { useToast } from "@/hooks/use-toast";
 import FollowUpCompleteDialog from "@/components/admin/appointments/FollowUpCompleteDialog";
+import AICallDetailsDialog from "@/components/admin/voice-ai/AICallDetailsDialog";
 
 interface FollowUpWithDetails {
   id: string;
@@ -28,6 +30,13 @@ interface FollowUpWithDetails {
   notes: string | null;
   created_at: string;
   completed_at: string | null;
+  ai_call_id: string | null;
+  ai_call_status: string | null;
+  ai_transcript: string | null;
+  ai_recording_url: string | null;
+  ai_parsed_responses: Record<string, unknown> | null;
+  ai_call_duration_ms: number | null;
+  ai_called_at: string | null;
   donors?: {
     id: string;
     donor_id: string;
@@ -42,13 +51,19 @@ interface FollowUpWithDetails {
 
 const FollowUpsDashboard = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [followUps, setFollowUps] = useState<FollowUpWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedFollowUp, setSelectedFollowUp] = useState<FollowUpWithDetails | null>(null);
+  const [aiDetailsOpen, setAiDetailsOpen] = useState(false);
+  const [selectedAiFollowUp, setSelectedAiFollowUp] = useState<FollowUpWithDetails | null>(null);
+  const [callingId, setCallingId] = useState<string | null>(null);
+  const [voiceAiEnabled, setVoiceAiEnabled] = useState(true);
 
   useEffect(() => {
     fetchFollowUps();
+    checkVoiceAiEnabled();
   }, []);
 
   const fetchFollowUps = async () => {
@@ -72,11 +87,124 @@ const FollowUpsDashboard = () => {
         .order("created_at", { ascending: true });
 
       if (error) throw error;
-      setFollowUps(data || []);
+      setFollowUps((data || []) as FollowUpWithDetails[]);
     } catch (error) {
       console.error("Error fetching follow-ups:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const checkVoiceAiEnabled = async () => {
+    try {
+      const { data } = await supabase
+        .from("voice_ai_settings")
+        .select("setting_value")
+        .eq("setting_key", "enabled")
+        .single();
+
+      setVoiceAiEnabled(data?.setting_value === "true");
+    } catch (error) {
+      console.error("Error checking voice AI status:", error);
+    }
+  };
+
+  const handleAiCall = async (followUp: FollowUpWithDetails) => {
+    if (!followUp.donors?.cell_phone) {
+      toast({
+        title: "No phone number",
+        description: "This donor has no phone number on file.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setCallingId(followUp.id);
+    try {
+      const { data, error } = await supabase.functions.invoke("retell-initiate-call", {
+        body: { follow_up_id: followUp.id },
+      });
+
+      if (error) throw error;
+
+      if (data?.error) {
+        throw new Error(data.error);
+      }
+
+      toast({
+        title: "AI call initiated",
+        description: `Calling ${followUp.donors.first_name} ${followUp.donors.last_name}...`,
+      });
+
+      // Refresh to show updated status
+      setTimeout(fetchFollowUps, 2000);
+    } catch (error) {
+      console.error("Error initiating AI call:", error);
+      toast({
+        title: "Call failed",
+        description: error instanceof Error ? error.message : "Failed to initiate AI call",
+        variant: "destructive",
+      });
+    } finally {
+      setCallingId(null);
+    }
+  };
+
+  const handleViewAiDetails = (followUp: FollowUpWithDetails) => {
+    setSelectedAiFollowUp(followUp);
+    setAiDetailsOpen(true);
+  };
+
+  const handleApplyAiData = async () => {
+    if (!selectedAiFollowUp?.ai_parsed_responses) return;
+
+    const parsed = selectedAiFollowUp.ai_parsed_responses;
+    
+    try {
+      const updateData: Record<string, unknown> = {};
+      
+      if (parsed.pain_level !== undefined) updateData.pain_level = parsed.pain_level;
+      if (parsed.current_pain_level !== undefined) updateData.current_pain_level = parsed.current_pain_level;
+      if (parsed.doctor_rating !== undefined) updateData.doctor_rating = parsed.doctor_rating;
+      if (parsed.nurse_rating !== undefined) updateData.nurse_rating = parsed.nurse_rating;
+      if (parsed.staff_rating !== undefined) updateData.staff_rating = parsed.staff_rating;
+      if (parsed.took_pain_medication !== undefined) updateData.took_pain_medication = parsed.took_pain_medication;
+      if (parsed.pain_medication_details !== undefined) updateData.pain_medication_details = parsed.pain_medication_details;
+      if (parsed.checked_aspiration_sites !== undefined) updateData.checked_aspiration_sites = parsed.checked_aspiration_sites;
+      if (parsed.aspiration_sites_notes !== undefined) updateData.aspiration_sites_notes = parsed.aspiration_sites_notes;
+      if (parsed.signs_of_infection !== undefined) updateData.signs_of_infection = parsed.signs_of_infection;
+      if (parsed.infection_details !== undefined) updateData.infection_details = parsed.infection_details;
+      if (parsed.unusual_symptoms !== undefined) updateData.unusual_symptoms = parsed.unusual_symptoms;
+      if (parsed.symptoms_details !== undefined) updateData.symptoms_details = parsed.symptoms_details;
+      if (parsed.would_donate_again !== undefined) updateData.would_donate_again = parsed.would_donate_again;
+      if (parsed.procedure_feedback !== undefined) updateData.procedure_feedback = parsed.procedure_feedback;
+
+      // Mark as completed
+      updateData.status = "completed";
+      updateData.completed_at = new Date().toISOString();
+
+      const { error } = await supabase
+        .from("follow_ups")
+        .update(updateData)
+        .eq("id", selectedAiFollowUp.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Data applied",
+        description: "AI-collected data has been applied and follow-up marked complete.",
+      });
+
+      setAiDetailsOpen(false);
+      setSelectedAiFollowUp(null);
+      fetchFollowUps();
+    } catch (error) {
+      console.error("Error applying AI data:", error);
+      toast({
+        title: "Error",
+        description: "Failed to apply AI data.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -94,6 +222,34 @@ const FollowUpsDashboard = () => {
         return <Badge className="bg-green-500/10 text-green-600 border-green-500/20">Completed</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
+    }
+  };
+
+  const getAiCallBadge = (status: string | null) => {
+    switch (status) {
+      case "initiated":
+      case "in_progress":
+        return (
+          <Badge className="bg-blue-500/10 text-blue-600 border-blue-500/20">
+            <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+            Calling...
+          </Badge>
+        );
+      case "completed":
+        return (
+          <Badge className="bg-green-500/10 text-green-600 border-green-500/20">
+            <CheckCircle2 className="h-3 w-3 mr-1" />
+            AI Completed
+          </Badge>
+        );
+      case "failed":
+        return (
+          <Badge variant="destructive">
+            Failed
+          </Badge>
+        );
+      default:
+        return null;
     }
   };
 
@@ -194,12 +350,17 @@ const FollowUpsDashboard = () => {
                   <TableHead>Donation Date</TableHead>
                   <TableHead>Days Since</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>AI Status</TableHead>
                   <TableHead></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {followUps.map((followUp) => {
                   const daysSince = differenceInDays(new Date(), parseISO(followUp.created_at));
+                  const isAiCalling = callingId === followUp.id || 
+                    followUp.ai_call_status === "initiated" || 
+                    followUp.ai_call_status === "in_progress";
+                  
                   return (
                     <TableRow key={followUp.id}>
                       <TableCell>
@@ -243,10 +404,38 @@ const FollowUpsDashboard = () => {
                         {getStatusBadge(followUp.status)}
                       </TableCell>
                       <TableCell>
-                        <Button size="sm" onClick={() => handleOpenDialog(followUp)}>
-                          <Phone className="h-4 w-4 mr-1" />
-                          Call
-                        </Button>
+                        {getAiCallBadge(followUp.ai_call_status)}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          {voiceAiEnabled && followUp.donors?.cell_phone && (
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => handleAiCall(followUp)}
+                              disabled={isAiCalling}
+                            >
+                              {isAiCalling ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Bot className="h-4 w-4" />
+                              )}
+                            </Button>
+                          )}
+                          {followUp.ai_call_status === "completed" && (
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => handleViewAiDetails(followUp)}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          )}
+                          <Button size="sm" onClick={() => handleOpenDialog(followUp)}>
+                            <Phone className="h-4 w-4 mr-1" />
+                            Call
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   );
@@ -267,6 +456,23 @@ const FollowUpsDashboard = () => {
           followUpId={selectedFollowUp.id}
           donorName={`${selectedFollowUp.donors?.first_name} ${selectedFollowUp.donors?.last_name}`}
           onSuccess={fetchFollowUps}
+        />
+      )}
+
+      {selectedAiFollowUp && (
+        <AICallDetailsDialog
+          open={aiDetailsOpen}
+          onOpenChange={(open) => {
+            setAiDetailsOpen(open);
+            if (!open) setSelectedAiFollowUp(null);
+          }}
+          transcript={selectedAiFollowUp.ai_transcript}
+          recordingUrl={selectedAiFollowUp.ai_recording_url}
+          parsedResponses={selectedAiFollowUp.ai_parsed_responses as Record<string, unknown> | null}
+          callDurationMs={selectedAiFollowUp.ai_call_duration_ms}
+          callStatus={selectedAiFollowUp.ai_call_status}
+          calledAt={selectedAiFollowUp.ai_called_at}
+          onApplyData={handleApplyAiData}
         />
       )}
     </div>
