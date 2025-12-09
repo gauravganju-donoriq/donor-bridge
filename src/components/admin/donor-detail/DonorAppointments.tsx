@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, Calendar, Clock, MoreHorizontal, MapPin, Car, FlaskConical } from "lucide-react";
+import { Plus, Calendar, Clock, MoreHorizontal, MapPin, Car, FlaskConical, Pencil, RefreshCw, X } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -24,33 +24,34 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { format, parseISO } from "date-fns";
 import AppointmentScheduleDialog from "@/components/admin/appointments/AppointmentScheduleDialog";
 import AppointmentStatusBadge from "@/components/admin/appointments/AppointmentStatusBadge";
+import AppointmentEditDialog from "@/components/admin/appointments/AppointmentEditDialog";
+import CancellationDialog from "@/components/admin/appointments/CancellationDialog";
+import RescheduleDialog from "@/components/admin/appointments/RescheduleDialog";
 import DonationResultsDialog from "@/components/admin/appointments/DonationResultsDialog";
-import type { AppointmentStatus } from "@/components/admin/appointments/types";
+import type { AppointmentStatus, AppointmentWithDonor } from "@/components/admin/appointments/types";
 
 interface DonorAppointmentsProps {
   donorId: string;
   donorName?: string;
 }
 
-interface AppointmentWithResults {
-  id: string;
-  donor_id: string;
-  appointment_date: string;
-  appointment_type: string | null;
-  status: AppointmentStatus | null;
-  notes: string | null;
-  purpose: string | null;
-  location: string | null;
-  donor_letter: string | null;
-  uber_needed: boolean | null;
-  uber_ordered: boolean | null;
-  prescreener?: { full_name: string | null };
+interface AppointmentWithResults extends AppointmentWithDonor {
   donation_results?: {
     volume_ml: number | null;
     cell_count: number | null;
@@ -70,6 +71,13 @@ const DonorAppointments = ({ donorId, donorName }: DonorAppointmentsProps) => {
   const [lastDonorLetter, setLastDonorLetter] = useState<string | null>(null);
   const [resultsDialogOpen, setResultsDialogOpen] = useState(false);
   const [selectedAppointmentId, setSelectedAppointmentId] = useState<string | null>(null);
+  
+  // Dialog states
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [rescheduleDialogOpen, setRescheduleDialogOpen] = useState(false);
+  const [noShowDialogOpen, setNoShowDialogOpen] = useState(false);
+  const [selectedAppointment, setSelectedAppointment] = useState<AppointmentWithResults | null>(null);
 
   useEffect(() => {
     fetchAppointments();
@@ -146,6 +154,33 @@ const DonorAppointments = ({ donorId, donorName }: DonorAppointmentsProps) => {
         variant: "destructive",
       });
     }
+  };
+
+  const openEditDialog = (apt: AppointmentWithResults) => {
+    setSelectedAppointment(apt);
+    setEditDialogOpen(true);
+  };
+
+  const openCancelDialog = (apt: AppointmentWithResults) => {
+    setSelectedAppointment(apt);
+    setCancelDialogOpen(true);
+  };
+
+  const openRescheduleDialog = (apt: AppointmentWithResults) => {
+    setSelectedAppointment(apt);
+    setRescheduleDialogOpen(true);
+  };
+
+  const openNoShowDialog = (apt: AppointmentWithResults) => {
+    setSelectedAppointment(apt);
+    setNoShowDialogOpen(true);
+  };
+
+  const handleNoShowConfirm = async () => {
+    if (!selectedAppointment) return;
+    await updateStatus(selectedAppointment.id, "no_show");
+    setNoShowDialogOpen(false);
+    setSelectedAppointment(null);
   };
 
   const getResults = (apt: AppointmentWithResults) => {
@@ -305,21 +340,32 @@ const DonorAppointments = ({ donorId, donorName }: DonorAppointmentsProps) => {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
+                            {apt.status === "scheduled" && (
+                              <>
+                                <DropdownMenuItem onClick={() => openEditDialog(apt)}>
+                                  <Pencil className="h-4 w-4 mr-2" />
+                                  Edit Appointment
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => openRescheduleDialog(apt)}>
+                                  <RefreshCw className="h-4 w-4 mr-2" />
+                                  Reschedule
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => openCancelDialog(apt)}>
+                                  <X className="h-4 w-4 mr-2" />
+                                  Cancel
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                              </>
+                            )}
                             <DropdownMenuItem onClick={() => handleMarkCompleted(apt)}>
                               {apt.appointment_type === "donation" ? "Complete & Enter Results" : "Mark Completed"}
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => updateStatus(apt.id, "cancelled")}>
-                              Mark Cancelled
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => updateStatus(apt.id, "no_show")}>
+                            <DropdownMenuItem onClick={() => openNoShowDialog(apt)}>
                               Mark No Show
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem onClick={() => updateStatus(apt.id, "deferred")}>
                               Mark Deferred
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => updateStatus(apt.id, "rescheduled")}>
-                              Mark Rescheduled
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => updateStatus(apt.id, "sample_not_taken")}>
                               Sample Not Taken
@@ -358,6 +404,55 @@ const DonorAppointments = ({ donorId, donorName }: DonorAppointmentsProps) => {
           onSuccess={fetchAppointments}
         />
       )}
+
+      {/* Edit Dialog */}
+      {selectedAppointment && (
+        <AppointmentEditDialog
+          open={editDialogOpen}
+          onOpenChange={setEditDialogOpen}
+          appointment={selectedAppointment as AppointmentWithDonor}
+          onSuccess={fetchAppointments}
+        />
+      )}
+
+      {/* Cancel Dialog */}
+      {selectedAppointment && (
+        <CancellationDialog
+          open={cancelDialogOpen}
+          onOpenChange={setCancelDialogOpen}
+          appointmentId={selectedAppointment.id}
+          donorName={donorName}
+          onSuccess={fetchAppointments}
+        />
+      )}
+
+      {/* Reschedule Dialog */}
+      {selectedAppointment && (
+        <RescheduleDialog
+          open={rescheduleDialogOpen}
+          onOpenChange={setRescheduleDialogOpen}
+          appointment={selectedAppointment as AppointmentWithDonor}
+          onSuccess={fetchAppointments}
+        />
+      )}
+
+      {/* No Show Confirmation */}
+      <AlertDialog open={noShowDialogOpen} onOpenChange={setNoShowDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Mark as No Show?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to mark this appointment{donorName ? ` for ${donorName}` : ""} as a no-show?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleNoShowConfirm}>
+              Mark No Show
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 };

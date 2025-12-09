@@ -70,3 +70,25 @@ export const STATUS_OPTIONS = [
   { value: "deferred", label: "Deferred", color: "warning" },
   { value: "sample_not_taken", label: "Sample Not Taken", color: "outline" },
 ] as const;
+
+export const CANCELLATION_REASONS = [
+  { value: "donor_cancelled", label: "Donor Cancelled" },
+  { value: "clinic_cancelled", label: "Clinic Cancelled" },
+  { value: "donor_illness", label: "Donor Illness" },
+  { value: "scheduling_conflict", label: "Scheduling Conflict" },
+  { value: "transportation_issue", label: "Transportation Issue" },
+  { value: "other", label: "Other" },
+] as const;
+
+export const DATE_RANGE_OPTIONS = [
+  { value: "all", label: "All Time" },
+  { value: "today", label: "Today" },
+  { value: "week", label: "This Week" },
+  { value: "next7", label: "Next 7 Days" },
+  { value: "month", label: "This Month" },
+  { value: "upcoming", label: "Upcoming" },
+  { value: "past", label: "Past" },
+] as const;
+
+export type CancellationReason = typeof CANCELLATION_REASONS[number]["value"];
+export type DateRangeOption = typeof DATE_RANGE_OPTIONS[number]["value"];
