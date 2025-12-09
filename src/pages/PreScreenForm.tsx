@@ -32,7 +32,20 @@ const formSchema = z.object({
   howHeard: z.string().min(1, "Please select how you heard about us"),
   
   // Step 3: Basic Health
-  dateOfBirth: z.string().min(1, "Date of birth is required"),
+  dateOfBirth: z.string().min(1, "Date of birth is required").refine((date) => {
+    if (!date) return false;
+    const birthDate = new Date(date);
+    const today = new Date();
+    // Check if date is not in the future
+    if (birthDate > today) return false;
+    // Calculate age
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    return age >= 18;
+  }, "You must be at least 18 years old to apply"),
   sexAtBirth: z.enum(["male", "female"]),
   height: z.string().min(1, "Height is required"),
   weight: z.string().min(1, "Weight is required"),
