@@ -41,6 +41,7 @@ import { format, parseISO } from "date-fns";
 import AppointmentScheduleDialog from "@/components/admin/appointments/AppointmentScheduleDialog";
 import AppointmentStatusBadge from "@/components/admin/appointments/AppointmentStatusBadge";
 import AppointmentEditDialog from "@/components/admin/appointments/AppointmentEditDialog";
+import AppointmentDetailsDialog from "@/components/admin/appointments/AppointmentDetailsDialog";
 import CancellationDialog from "@/components/admin/appointments/CancellationDialog";
 import RescheduleDialog from "@/components/admin/appointments/RescheduleDialog";
 import DonationResultsDialog from "@/components/admin/appointments/DonationResultsDialog";
@@ -77,7 +78,9 @@ const DonorAppointments = ({ donorId, donorName }: DonorAppointmentsProps) => {
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [rescheduleDialogOpen, setRescheduleDialogOpen] = useState(false);
   const [noShowDialogOpen, setNoShowDialogOpen] = useState(false);
+  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<AppointmentWithResults | null>(null);
+  const [detailsAppointmentId, setDetailsAppointmentId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchAppointments();
@@ -183,6 +186,11 @@ const DonorAppointments = ({ donorId, donorName }: DonorAppointmentsProps) => {
     setSelectedAppointment(null);
   };
 
+  const openDetailsDialog = (apt: AppointmentWithResults) => {
+    setDetailsAppointmentId(apt.id);
+    setDetailsDialogOpen(true);
+  };
+
   const getResults = (apt: AppointmentWithResults) => {
     const results = apt.donation_results;
     if (!results) return null;
@@ -244,7 +252,11 @@ const DonorAppointments = ({ donorId, donorName }: DonorAppointmentsProps) => {
                 {appointments.map((apt) => {
                   const results = getResults(apt);
                   return (
-                    <TableRow key={apt.id}>
+                    <TableRow 
+                      key={apt.id} 
+                      className="cursor-pointer hover:bg-muted/50"
+                      onClick={() => openDetailsDialog(apt)}
+                    >
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <Calendar className="h-4 w-4 text-muted-foreground" />
@@ -334,7 +346,7 @@ const DonorAppointments = ({ donorId, donorName }: DonorAppointmentsProps) => {
                       </TableCell>
                       <TableCell>
                         <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
+                          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                             <Button variant="ghost" size="icon" className="h-8 w-8">
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
@@ -453,6 +465,15 @@ const DonorAppointments = ({ donorId, donorName }: DonorAppointmentsProps) => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Appointment Details Dialog */}
+      {detailsAppointmentId && (
+        <AppointmentDetailsDialog
+          open={detailsDialogOpen}
+          onOpenChange={setDetailsDialogOpen}
+          appointmentId={detailsAppointmentId}
+        />
+      )}
     </>
   );
 };
