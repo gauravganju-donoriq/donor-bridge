@@ -20,6 +20,7 @@ import {
   Brain,
   Play,
   Link2,
+  AlertTriangle,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -108,10 +109,12 @@ const DonorApproval = () => {
   const [approveDialogOpen, setApproveDialogOpen] = useState(false);
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [linkDialogOpen, setLinkDialogOpen] = useState(false);
+  const [duplicateDialogOpen, setDuplicateDialogOpen] = useState(false);
+  const [duplicateDonors, setDuplicateDonors] = useState<Tables<"donors">[]>([]);
   const [reviewerNotes, setReviewerNotes] = useState("");
   const [processing, setProcessing] = useState(false);
 
-  // Fetch submissions
+  // Check for duplicate donors
   useEffect(() => {
     fetchSubmissions();
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -197,6 +200,39 @@ const DonorApproval = () => {
     setSheetOpen(true);
   };
 
+  // Check for duplicates before approving
+  const checkForDuplicates = async () => {
+    if (!selectedSubmission) return;
+    
+    setProcessing(true);
+    try {
+      const { data: duplicates, error } = await supabase
+        .from("donors")
+        .select("*")
+        .ilike("first_name", selectedSubmission.first_name)
+        .ilike("last_name", selectedSubmission.last_name)
+        .eq("birth_date", selectedSubmission.birth_date || "")
+        .limit(5);
+
+      if (error) throw error;
+
+      if (duplicates && duplicates.length > 0) {
+        setDuplicateDonors(duplicates);
+        setApproveDialogOpen(false);
+        setDuplicateDialogOpen(true);
+      } else {
+        // No duplicates, proceed with approval
+        await handleApprove();
+      }
+    } catch (error) {
+      console.error("Error checking duplicates:", error);
+      // If check fails, still allow approval
+      await handleApprove();
+    } finally {
+      setProcessing(false);
+    }
+  };
+
   const handleApprove = async () => {
     if (!selectedSubmission || !user) return;
 
@@ -252,7 +288,9 @@ const DonorApproval = () => {
       });
 
       setApproveDialogOpen(false);
+      setDuplicateDialogOpen(false);
       setSheetOpen(false);
+      setDuplicateDonors([]);
       fetchSubmissions();
     } catch (error) {
       console.error("Error approving submission:", error);
@@ -264,6 +302,12 @@ const DonorApproval = () => {
     } finally {
       setProcessing(false);
     }
+  };
+
+  const handleLinkToDuplicate = () => {
+    setDuplicateDialogOpen(false);
+    // Open the link dialog so admin can select the donor to link to
+    setLinkDialogOpen(true);
   };
 
   const handleReject = async () => {
@@ -815,8 +859,66 @@ const DonorApproval = () => {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={processing}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={checkForDuplicates} disabled={processing}>
+              {processing ? "Checking..." : "Approve & Create Donor"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Duplicate Warning Dialog */}
+      <AlertDialog open={duplicateDialogOpen} onOpenChange={setDuplicateDialogOpen}>
+        <AlertDialogContent className="max-w-lg">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-amber-600">
+              <AlertTriangle className="h-5 w-5" />
+              Potential Duplicate Found
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                <p>
+                  We found {duplicateDonors.length} existing donor{duplicateDonors.length > 1 ? "s" : ""} with matching name and birth date:
+                </p>
+                <div className="space-y-2">
+                  {duplicateDonors.map((donor) => (
+                    <div key={donor.id} className="bg-muted/50 rounded-lg p-3 text-sm">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium text-foreground">
+                            {donor.first_name} {donor.last_name}
+                          </p>
+                          <p className="text-muted-foreground">
+                            ID: {donor.donor_id} • DOB: {donor.birth_date}
+                          </p>
+                          {donor.cell_phone && (
+                            <p className="text-muted-foreground">Phone: {donor.cell_phone}</p>
+                          )}
+                        </div>
+                        <Badge variant={donor.eligibility_status === "eligible" ? "default" : "secondary"}>
+                          {donor.eligibility_status}
+                        </Badge>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-sm">
+                  Would you like to link this submission to an existing donor, or create a new donor anyway?
+                </p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+            <AlertDialogCancel disabled={processing}>Cancel</AlertDialogCancel>
+            <Button
+              variant="outline"
+              onClick={handleLinkToDuplicate}
+              disabled={processing}
+            >
+              <Link2 className="h-4 w-4 mr-2" />
+              Link to Existing
+            </Button>
             <AlertDialogAction onClick={handleApprove} disabled={processing}>
-              {processing ? "Creating..." : "Approve & Create Donor"}
+              {processing ? "Creating..." : "Create Anyway"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
