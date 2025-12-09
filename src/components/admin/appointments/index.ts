@@ -3,6 +3,7 @@ export { default as AppointmentStatusBadge } from "./AppointmentStatusBadge";
 export { default as AppointmentCalendar } from "./AppointmentCalendar";
 export { default as AppointmentList } from "./AppointmentList";
 export { default as AppointmentEditDialog } from "./AppointmentEditDialog";
+export { default as AppointmentDetailsDialog } from "./AppointmentDetailsDialog";
 export { default as CancellationDialog } from "./CancellationDialog";
 export { default as RescheduleDialog } from "./RescheduleDialog";
 export { default as DonationResultsDialog } from "./DonationResultsDialog";
