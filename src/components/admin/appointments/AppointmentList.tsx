@@ -43,6 +43,7 @@ import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import AppointmentStatusBadge from "./AppointmentStatusBadge";
 import AppointmentEditDialog from "./AppointmentEditDialog";
+import AppointmentDetailsDialog from "./AppointmentDetailsDialog";
 import CancellationDialog from "./CancellationDialog";
 import RescheduleDialog from "./RescheduleDialog";
 import { AppointmentWithDonor, AppointmentStatus, STATUS_OPTIONS, DATE_RANGE_OPTIONS, DateRangeOption } from "./types";
@@ -66,7 +67,9 @@ const AppointmentList = ({ onRefresh }: AppointmentListProps) => {
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [rescheduleDialogOpen, setRescheduleDialogOpen] = useState(false);
   const [noShowDialogOpen, setNoShowDialogOpen] = useState(false);
+  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<AppointmentWithDonor | null>(null);
+  const [selectedAppointmentId, setSelectedAppointmentId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchAppointments();
@@ -159,6 +162,11 @@ const AppointmentList = ({ onRefresh }: AppointmentListProps) => {
   const handleDialogSuccess = () => {
     fetchAppointments();
     onRefresh?.();
+  };
+
+  const openDetailsDialog = (apt: AppointmentWithDonor) => {
+    setSelectedAppointmentId(apt.id);
+    setDetailsDialogOpen(true);
   };
 
   const filterByDateRange = (apt: AppointmentWithDonor): boolean => {
@@ -288,8 +296,12 @@ const AppointmentList = ({ onRefresh }: AppointmentListProps) => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredAppointments.map((apt) => (
-                    <TableRow key={apt.id} className="cursor-pointer hover:bg-muted/50">
+                {filteredAppointments.map((apt) => (
+                    <TableRow 
+                      key={apt.id} 
+                      className="cursor-pointer hover:bg-muted/50"
+                      onClick={() => openDetailsDialog(apt)}
+                    >
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <Calendar className="h-4 w-4 text-muted-foreground" />
@@ -307,7 +319,10 @@ const AppointmentList = ({ onRefresh }: AppointmentListProps) => {
                       <TableCell>
                         <div
                           className="flex items-center gap-2 cursor-pointer hover:text-primary"
-                          onClick={() => navigate(`/admin/donors/${apt.donor_id}`)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/admin/donors/${apt.donor_id}`);
+                          }}
                         >
                           <User className="h-4 w-4 text-muted-foreground" />
                           <div>
@@ -353,7 +368,7 @@ const AppointmentList = ({ onRefresh }: AppointmentListProps) => {
                       </TableCell>
                       <TableCell>
                         <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
+                          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                             <Button variant="ghost" size="icon" className="h-8 w-8">
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
@@ -454,6 +469,15 @@ const AppointmentList = ({ onRefresh }: AppointmentListProps) => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Details Dialog */}
+      {selectedAppointmentId && (
+        <AppointmentDetailsDialog
+          open={detailsDialogOpen}
+          onOpenChange={setDetailsDialogOpen}
+          appointmentId={selectedAppointmentId}
+        />
+      )}
     </>
   );
 };
