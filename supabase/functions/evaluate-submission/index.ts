@@ -51,16 +51,22 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Fetch the submission
+    // Fetch the submission - support both UUID (id) and text (submission_id) formats
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(submission_id);
+    const queryField = isUuid ? "id" : "submission_id";
+    
     const { data: submission, error: subError } = await supabase
       .from("webform_submissions")
       .select("*")
-      .eq("id", submission_id)
+      .eq(queryField, submission_id)
       .single();
 
     if (subError || !submission) {
       throw new Error(`Submission not found: ${subError?.message}`);
     }
+    
+    // Use the actual UUID for updates
+    const submissionUuid = submission.id;
 
     // Fetch active screening rules
     const { data: rules, error: rulesError } = await supabase
@@ -267,7 +273,7 @@ Provide your assessment.`,
       evaluated_at: new Date().toISOString(),
     };
 
-    // Update the submission with evaluation results
+    // Update the submission with evaluation results (use UUID)
     const { error: updateError } = await supabase
       .from("webform_submissions")
       .update({
@@ -277,7 +283,7 @@ Provide your assessment.`,
         evaluation_flags: flags,
         evaluated_at: evaluation.evaluated_at,
       })
-      .eq("id", submission_id);
+      .eq("id", submissionUuid);
 
     if (updateError) {
       throw new Error(`Failed to update submission: ${updateError.message}`);
