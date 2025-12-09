@@ -19,6 +19,7 @@ import {
   Scale,
   Brain,
   Play,
+  Link2,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -67,6 +68,7 @@ import { format, differenceInYears } from "date-fns";
 import type { Tables } from "@/integrations/supabase/types";
 import { EvaluationBadge } from "@/components/admin/screening/EvaluationBadge";
 import { EvaluationDetails } from "@/components/admin/screening/EvaluationDetails";
+import LinkToDonorDialog from "@/components/admin/LinkToDonorDialog";
 
 interface EvaluationFlag {
   rule_key: string;
@@ -105,6 +107,7 @@ const DonorApproval = () => {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [approveDialogOpen, setApproveDialogOpen] = useState(false);
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+  const [linkDialogOpen, setLinkDialogOpen] = useState(false);
   const [reviewerNotes, setReviewerNotes] = useState("");
   const [processing, setProcessing] = useState(false);
 
@@ -781,9 +784,17 @@ const DonorApproval = () => {
                       <XCircle className="h-4 w-4 mr-2" />
                       Reject
                     </Button>
+                    <Button
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => setLinkDialogOpen(true)}
+                    >
+                      <Link2 className="h-4 w-4 mr-2" />
+                      Link to Existing
+                    </Button>
                     <Button className="flex-1" onClick={() => setApproveDialogOpen(true)}>
                       <CheckCircle className="h-4 w-4 mr-2" />
-                      Approve & Create Donor
+                      Approve
                     </Button>
                   </div>
                 )}
@@ -832,6 +843,17 @@ const DonorApproval = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Link to Donor Dialog */}
+      <LinkToDonorDialog
+        open={linkDialogOpen}
+        onOpenChange={setLinkDialogOpen}
+        submission={selectedSubmission}
+        onSuccess={() => {
+          fetchSubmissions();
+          setSheetOpen(false);
+        }}
+      />
     </div>
   );
 };

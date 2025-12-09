@@ -11,7 +11,9 @@ import StepTwo from "@/components/pre-screen/StepTwo";
 import StepThree from "@/components/pre-screen/StepThree";
 import StepFour from "@/components/pre-screen/StepFour";
 import StepFive from "@/components/pre-screen/StepFive";
-import { ArrowLeft, ArrowRight } from "lucide-react";
+import { ArrowLeft, ArrowRight, Loader2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 const formSchema = z.object({
   // Step 1: Contact Info
@@ -61,28 +63,39 @@ const formSchema = z.object({
 
 export type FormData = z.infer<typeof formSchema>;
 
+// Parse height string like "5'10\"" into feet and inches
+const parseHeight = (heightStr: string): { feet: number; inches: number } => {
+  const match = heightStr.match(/(\d+)'(\d+)"/);
+  if (match) {
+    return { feet: parseInt(match[1], 10), inches: parseInt(match[2], 10) };
+  }
+  return { feet: 0, inches: 0 };
+};
+
 const PreScreenForm = () => {
   const [currentStep, setCurrentStep] = useState(1);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
+  const { toast } = useToast();
   
   const methods = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      firstName: "John",
-      lastName: "Doe",
-      phone: "(555) 123-4567",
-      email: "john.doe@example.com",
-      streetAddress: "123 Main Street",
-      addressLine2: "Apt 4B",
-      city: "Rockville",
-      state: "MD",
-      zipCode: "20850",
+      firstName: "",
+      lastName: "",
+      phone: "",
+      email: "",
+      streetAddress: "",
+      addressLine2: "",
+      city: "",
+      state: "",
+      zipCode: "",
       preferredContact: "phone",
-      howHeard: "Search Engine (Google, Bing, etc.)",
-      dateOfBirth: "1990-05-15",
+      howHeard: "",
+      dateOfBirth: "",
       sexAtBirth: "male",
-      height: "5'10\"",
-      weight: "175",
+      height: "",
+      weight: "",
       previouslyDonated: "no",
       underPhysicianCare: "no",
       prescriptionMeds: "no",
@@ -99,7 +112,7 @@ const PreScreenForm = () => {
       backHipSpine: "no",
       covidSymptoms: "no",
       availableToDonateSixWeeks: "yes",
-      availabilityExplanation: "I am available weekdays after 5pm and all day on weekends.",
+      availabilityExplanation: "",
       locationConsent: false,
       bmiConsent: false,
     },
@@ -131,9 +144,79 @@ const PreScreenForm = () => {
     setCurrentStep(prev => Math.max(prev - 1, 1));
   };
 
-  const onSubmit = (data: FormData) => {
-    console.log("Form submitted:", data);
-    navigate("/confirmation");
+  const onSubmit = async (data: FormData) => {
+    setIsSubmitting(true);
+    
+    try {
+      // Parse height into feet and inches
+      const { feet, inches } = parseHeight(data.height);
+      
+      // Generate a temporary submission_id (will be replaced by trigger if configured)
+      const tempSubmissionId = `WF-${Date.now().toString().slice(-6)}`;
+      
+      // Map form data to database columns
+      const submissionData = {
+        submission_id: tempSubmissionId,
+        first_name: data.firstName,
+        last_name: data.lastName,
+        phone: data.phone,
+        email: data.email,
+        street_address: data.streetAddress,
+        address_line_2: data.addressLine2 || null,
+        city: data.city,
+        state: data.state,
+        zip_code: data.zipCode,
+        birth_date: data.dateOfBirth,
+        assigned_sex: data.sexAtBirth,
+        height_feet: feet,
+        height_inches: inches,
+        weight: parseInt(data.weight, 10) || null,
+        // Map health questions to database booleans
+        has_blood_disorder: data.bloodDisorder === "yes",
+        takes_medications: data.prescriptionMeds === "yes",
+        had_surgery: data.hospitalizedSurgery === "yes",
+        has_been_incarcerated: data.correctionalInstitution === "yes",
+        has_been_pregnant: data.pregnantOrBreastfeeding === "yes",
+        // Acknowledgements
+        acknowledge_info_accurate: data.locationConsent,
+        acknowledge_time_commitment: data.bmiConsent,
+        acknowledge_health_screening: true, // They completed the form
+      };
+
+      const { data: result, error } = await supabase
+        .from("webform_submissions")
+        .insert([submissionData])
+        .select("submission_id")
+        .single();
+
+      if (error) {
+        console.error("Submission error:", error);
+        toast({
+          title: "Submission Failed",
+          description: "There was an error submitting your application. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Trigger AI evaluation (non-blocking)
+      supabase.functions.invoke("evaluate-submission", {
+        body: { submission_id: result.submission_id, use_ai: false },
+      }).catch(err => console.error("Evaluation error:", err));
+
+      // Navigate to confirmation with submission ID
+      navigate(`/confirmation?id=${result.submission_id}`);
+      
+    } catch (error) {
+      console.error("Unexpected error:", error);
+      toast({
+        title: "Submission Failed",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const stepTitles = ["Contact Information", "Contact Preferences", "Basic Health Info", "Health Screening", "Review & Submit"];
@@ -169,7 +252,7 @@ const PreScreenForm = () => {
                     type="button"
                     variant="outline"
                     onClick={handleBack}
-                    disabled={currentStep === 1}
+                    disabled={currentStep === 1 || isSubmitting}
                   >
                     <ArrowLeft className="w-4 h-4 mr-2" />
                     Back
@@ -181,8 +264,15 @@ const PreScreenForm = () => {
                       <ArrowRight className="w-4 h-4 ml-2" />
                     </Button>
                   ) : (
-                    <Button type="submit">
-                      Submit Application
+                    <Button type="submit" disabled={isSubmitting}>
+                      {isSubmitting ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Submitting...
+                        </>
+                      ) : (
+                        "Submit Application"
+                      )}
                     </Button>
                   )}
                 </div>
