@@ -17,6 +17,42 @@ interface DonorPersonalInfoProps {
   editMode: boolean;
 }
 
+// Moved outside component to prevent re-creation on each render
+const FieldDisplay = ({ label, value }: { label: string; value: string | null | undefined }) => (
+  <div className="space-y-1">
+    <span className="text-sm text-muted-foreground">{label}</span>
+    <p className="text-sm font-medium">{value || "—"}</p>
+  </div>
+);
+
+interface FieldInputProps {
+  label: string;
+  field: string;
+  type?: string;
+  placeholder?: string;
+  value: string;
+  onChange: (value: string) => void;
+  editMode: boolean;
+}
+
+// Moved outside component to prevent re-creation on each render
+const FieldInput = ({ label, field, type = "text", placeholder, value, onChange, editMode }: FieldInputProps) => {
+  return editMode ? (
+    <div className="space-y-1.5">
+      <Label htmlFor={field} className="text-sm">{label}</Label>
+      <Input
+        id={field}
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+      />
+    </div>
+  ) : (
+    <FieldDisplay label={label} value={value} />
+  );
+};
+
 const DonorPersonalInfo = ({ donor, formData, setFormData, editMode }: DonorPersonalInfoProps) => {
   const [referringDonor, setReferringDonor] = useState<{ donor_id: string; first_name: string; last_name: string } | null>(null);
 
@@ -41,30 +77,8 @@ const DonorPersonalInfo = ({ donor, formData, setFormData, editMode }: DonorPers
     setFormData({ ...formData, [field]: value });
   };
 
-  const FieldDisplay = ({ label, value }: { label: string; value: string | null | undefined }) => (
-    <div className="space-y-1">
-      <span className="text-sm text-muted-foreground">{label}</span>
-      <p className="text-sm font-medium">{value || "—"}</p>
-    </div>
-  );
-
-  const FieldInput = ({ label, field, type = "text", placeholder }: { label: string; field: keyof Donor; type?: string; placeholder?: string }) => {
-    const value = editMode ? (formData[field] as string) || "" : (donor[field] as string) || "";
-    
-    return editMode ? (
-      <div className="space-y-1.5">
-        <Label htmlFor={field} className="text-sm">{label}</Label>
-        <Input
-          id={field}
-          type={type}
-          value={value}
-          onChange={(e) => updateField(field, e.target.value)}
-          placeholder={placeholder}
-        />
-      </div>
-    ) : (
-      <FieldDisplay label={label} value={value} />
-    );
+  const getFieldValue = (field: keyof Donor) => {
+    return editMode ? (formData[field] as string) || "" : (donor[field] as string) || "";
   };
 
   return (
@@ -76,12 +90,40 @@ const DonorPersonalInfo = ({ donor, formData, setFormData, editMode }: DonorPers
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
-            <FieldInput label="First Name" field="first_name" placeholder="First" />
-            <FieldInput label="Last Name" field="last_name" placeholder="Last" />
+            <FieldInput 
+              label="First Name" 
+              field="first_name" 
+              placeholder="First" 
+              value={getFieldValue("first_name")}
+              onChange={(v) => updateField("first_name", v)}
+              editMode={editMode}
+            />
+            <FieldInput 
+              label="Last Name" 
+              field="last_name" 
+              placeholder="Last" 
+              value={getFieldValue("last_name")}
+              onChange={(v) => updateField("last_name", v)}
+              editMode={editMode}
+            />
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <FieldInput label="Middle Initial" field="middle_initial" placeholder="M.I." />
-            <FieldInput label="Chosen Name" field="chosen_name" placeholder="Preferred" />
+            <FieldInput 
+              label="Middle Initial" 
+              field="middle_initial" 
+              placeholder="M.I." 
+              value={getFieldValue("middle_initial")}
+              onChange={(v) => updateField("middle_initial", v)}
+              editMode={editMode}
+            />
+            <FieldInput 
+              label="Chosen Name" 
+              field="chosen_name" 
+              placeholder="Preferred" 
+              value={getFieldValue("chosen_name")}
+              onChange={(v) => updateField("chosen_name", v)}
+              editMode={editMode}
+            />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
@@ -125,8 +167,22 @@ const DonorPersonalInfo = ({ donor, formData, setFormData, editMode }: DonorPers
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <FieldInput label="Pronouns" field="pronouns" placeholder="e.g., they/them" />
-            <FieldInput label="Ethnicity" field="ethnicity" placeholder="Ethnicity" />
+            <FieldInput 
+              label="Pronouns" 
+              field="pronouns" 
+              placeholder="e.g., they/them" 
+              value={getFieldValue("pronouns")}
+              onChange={(v) => updateField("pronouns", v)}
+              editMode={editMode}
+            />
+            <FieldInput 
+              label="Ethnicity" 
+              field="ethnicity" 
+              placeholder="Ethnicity" 
+              value={getFieldValue("ethnicity")}
+              onChange={(v) => updateField("ethnicity", v)}
+              editMode={editMode}
+            />
           </div>
         </CardContent>
       </Card>
@@ -137,10 +193,42 @@ const DonorPersonalInfo = ({ donor, formData, setFormData, editMode }: DonorPers
           <CardTitle className="text-base font-semibold">Contact</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <FieldInput label="Email" field="email" type="email" placeholder="email@example.com" />
-          <FieldInput label="Cell Phone" field="cell_phone" type="tel" placeholder="(555) 123-4567" />
-          <FieldInput label="Home Phone" field="home_phone" type="tel" placeholder="(555) 123-4567" />
-          <FieldInput label="Work Phone" field="work_phone" type="tel" placeholder="(555) 123-4567" />
+          <FieldInput 
+            label="Email" 
+            field="email" 
+            type="email" 
+            placeholder="email@example.com" 
+            value={getFieldValue("email")}
+            onChange={(v) => updateField("email", v)}
+            editMode={editMode}
+          />
+          <FieldInput 
+            label="Cell Phone" 
+            field="cell_phone" 
+            type="tel" 
+            placeholder="(555) 123-4567" 
+            value={getFieldValue("cell_phone")}
+            onChange={(v) => updateField("cell_phone", v)}
+            editMode={editMode}
+          />
+          <FieldInput 
+            label="Home Phone" 
+            field="home_phone" 
+            type="tel" 
+            placeholder="(555) 123-4567" 
+            value={getFieldValue("home_phone")}
+            onChange={(v) => updateField("home_phone", v)}
+            editMode={editMode}
+          />
+          <FieldInput 
+            label="Work Phone" 
+            field="work_phone" 
+            type="tel" 
+            placeholder="(555) 123-4567" 
+            value={getFieldValue("work_phone")}
+            onChange={(v) => updateField("work_phone", v)}
+            editMode={editMode}
+          />
         </CardContent>
       </Card>
 
@@ -150,12 +238,47 @@ const DonorPersonalInfo = ({ donor, formData, setFormData, editMode }: DonorPers
           <CardTitle className="text-base font-semibold">Address</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <FieldInput label="Address Line 1" field="address_line_1" placeholder="123 Main St" />
-          <FieldInput label="Address Line 2" field="address_line_2" placeholder="Apt 4B" />
+          <FieldInput 
+            label="Address Line 1" 
+            field="address_line_1" 
+            placeholder="123 Main St" 
+            value={getFieldValue("address_line_1")}
+            onChange={(v) => updateField("address_line_1", v)}
+            editMode={editMode}
+          />
+          <FieldInput 
+            label="Address Line 2" 
+            field="address_line_2" 
+            placeholder="Apt 4B" 
+            value={getFieldValue("address_line_2")}
+            onChange={(v) => updateField("address_line_2", v)}
+            editMode={editMode}
+          />
           <div className="grid grid-cols-3 gap-3">
-            <FieldInput label="City" field="city" placeholder="City" />
-            <FieldInput label="State" field="state" placeholder="State" />
-            <FieldInput label="Postal Code" field="postal_code" placeholder="12345" />
+            <FieldInput 
+              label="City" 
+              field="city" 
+              placeholder="City" 
+              value={getFieldValue("city")}
+              onChange={(v) => updateField("city", v)}
+              editMode={editMode}
+            />
+            <FieldInput 
+              label="State" 
+              field="state" 
+              placeholder="State" 
+              value={getFieldValue("state")}
+              onChange={(v) => updateField("state", v)}
+              editMode={editMode}
+            />
+            <FieldInput 
+              label="Postal Code" 
+              field="postal_code" 
+              placeholder="12345" 
+              value={getFieldValue("postal_code")}
+              onChange={(v) => updateField("postal_code", v)}
+              editMode={editMode}
+            />
           </div>
         </CardContent>
       </Card>
@@ -191,7 +314,14 @@ const DonorPersonalInfo = ({ donor, formData, setFormData, editMode }: DonorPers
               />
             )}
           </div>
-          <FieldInput label="Ineligibility Reason" field="ineligibility_reason" placeholder="Reason if ineligible" />
+          <FieldInput 
+            label="Ineligibility Reason" 
+            field="ineligibility_reason" 
+            placeholder="Reason if ineligible" 
+            value={getFieldValue("ineligibility_reason")}
+            onChange={(v) => updateField("ineligibility_reason", v)}
+            editMode={editMode}
+          />
         </CardContent>
       </Card>
 
@@ -202,8 +332,22 @@ const DonorPersonalInfo = ({ donor, formData, setFormData, editMode }: DonorPers
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
-            <FieldInput label="Referred By" field="referred_by" placeholder="e.g., Dr. Smith, Google" />
-            <FieldInput label="Vendor Number" field="vendor_number" placeholder="External reference" />
+            <FieldInput 
+              label="Referred By" 
+              field="referred_by" 
+              placeholder="e.g., Dr. Smith, Google" 
+              value={getFieldValue("referred_by")}
+              onChange={(v) => updateField("referred_by", v)}
+              editMode={editMode}
+            />
+            <FieldInput 
+              label="Vendor Number" 
+              field="vendor_number" 
+              placeholder="External reference" 
+              value={getFieldValue("vendor_number")}
+              onChange={(v) => updateField("vendor_number", v)}
+              editMode={editMode}
+            />
           </div>
           <div className="space-y-1.5">
             {editMode ? (
