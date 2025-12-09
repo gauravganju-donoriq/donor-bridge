@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { Heart, Shield, Clock } from "lucide-react";
+import { Heart, Shield, Clock, Search } from "lucide-react";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -66,9 +66,15 @@ const Index = () => {
           <p className="text-muted-foreground mb-6">
             Start your pre-screening application today. The process takes only 5-10 minutes.
           </p>
-          <Button onClick={() => navigate("/apply")}>
-            Start Application
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <Button onClick={() => navigate("/apply")}>
+              Start Application
+            </Button>
+            <Button variant="outline" onClick={() => navigate("/status")}>
+              <Search className="w-4 h-4 mr-2" />
+              Check Application Status
+            </Button>
+          </div>
         </div>
       </section>
     </div>
