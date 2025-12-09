@@ -1,7 +1,7 @@
 import { useSearchParams, Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, Home, Mail, Phone } from "lucide-react";
+import { CheckCircle2, Home, Mail, Phone, Search } from "lucide-react";
 
 const Confirmation = () => {
   const [searchParams] = useSearchParams();
@@ -68,7 +68,13 @@ const Confirmation = () => {
             </div>
           </div>
 
-          <div className="pt-4">
+          <div className="pt-4 flex flex-col gap-2">
+            <Button asChild variant="outline" className="w-full">
+              <Link to={`/status${submissionId ? `?id=${submissionId}` : ""}`}>
+                <Search className="w-4 h-4 mr-2" />
+                Check Status Later
+              </Link>
+            </Button>
             <Button asChild className="w-full">
               <Link to="/">
                 <Home className="w-4 h-4 mr-2" />
