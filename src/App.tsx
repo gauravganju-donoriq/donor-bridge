@@ -8,6 +8,7 @@ import Index from "./pages/Index";
 import PreScreenForm from "./pages/PreScreenForm";
 import Confirmation from "./pages/Confirmation";
 import NotFound from "./pages/NotFound";
+import StatusLookup from "./pages/StatusLookup";
 import Questionnaire from "./pages/Questionnaire";
 import ConsentForm from "./pages/ConsentForm";
 
@@ -41,6 +42,7 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/apply" element={<PreScreenForm />} />
             <Route path="/confirmation" element={<Confirmation />} />
+            <Route path="/status" element={<StatusLookup />} />
             <Route path="/questionnaire/:token" element={<Questionnaire />} />
             <Route path="/consent/:token" element={<ConsentForm />} />
 
