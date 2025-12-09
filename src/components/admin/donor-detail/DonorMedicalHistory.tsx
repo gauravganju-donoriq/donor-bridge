@@ -15,6 +15,14 @@ interface DonorMedicalHistoryProps {
   editMode: boolean;
 }
 
+// Moved outside component to prevent re-creation on each render
+const FieldDisplay = ({ label, value }: { label: string; value: string | null | undefined }) => (
+  <div className="space-y-1">
+    <span className="text-sm text-muted-foreground">{label}</span>
+    <p className="text-sm font-medium">{value || "—"}</p>
+  </div>
+);
+
 const DonorMedicalHistory = ({ donor, formData, setFormData, editMode }: DonorMedicalHistoryProps) => {
   const updateField = (field: keyof Donor, value: unknown) => {
     setFormData({ ...formData, [field]: value });
@@ -45,13 +53,6 @@ const DonorMedicalHistory = ({ donor, formData, setFormData, editMode }: DonorMe
     if (!inches) return "—";
     return `${Math.floor(inches / 12)}'${inches % 12}"`;
   };
-
-  const FieldDisplay = ({ label, value }: { label: string; value: string | null | undefined }) => (
-    <div className="space-y-1">
-      <span className="text-sm text-muted-foreground">{label}</span>
-      <p className="text-sm font-medium">{value || "—"}</p>
-    </div>
-  );
 
   return (
     <div className="grid gap-4 md:grid-cols-2">
