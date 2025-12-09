@@ -2,6 +2,9 @@ export { default as AppointmentScheduleDialog } from "./AppointmentScheduleDialo
 export { default as AppointmentStatusBadge } from "./AppointmentStatusBadge";
 export { default as AppointmentCalendar } from "./AppointmentCalendar";
 export { default as AppointmentList } from "./AppointmentList";
+export { default as AppointmentEditDialog } from "./AppointmentEditDialog";
+export { default as CancellationDialog } from "./CancellationDialog";
+export { default as RescheduleDialog } from "./RescheduleDialog";
 export { default as DonationResultsDialog } from "./DonationResultsDialog";
 export { default as PaymentEntryDialog } from "./PaymentEntryDialog";
 export { default as FollowUpCompleteDialog } from "./FollowUpCompleteDialog";
