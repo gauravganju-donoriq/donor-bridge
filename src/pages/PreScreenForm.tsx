@@ -223,9 +223,9 @@ const PreScreenForm = () => {
         return;
       }
 
-      // Trigger AI evaluation (non-blocking)
+      // Trigger AI evaluation (non-blocking) - AI enabled for review_required cases
       supabase.functions.invoke("evaluate-submission", {
-        body: { submission_id: result.submission_id, use_ai: false },
+        body: { submission_id: result.submission_id, use_ai: true },
       }).catch(err => console.error("Evaluation error:", err));
 
       // Navigate to confirmation with submission ID

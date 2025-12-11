@@ -411,7 +411,7 @@ const DonorApproval = () => {
           batch.map(async (sub) => {
             try {
               await supabase.functions.invoke("evaluate-submission", {
-                body: { submission_id: sub.id, use_ai: false },
+                body: { submission_id: sub.id, use_ai: true },
               });
               processed++;
             } catch (err) {

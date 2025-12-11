@@ -6,6 +6,8 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+const AI_TIMEOUT_MS = 15000; // 15 second timeout for AI calls
+
 interface ScreeningRule {
   id: string;
   rule_type: "hard_disqualify" | "soft_flag" | "threshold";
@@ -33,6 +35,8 @@ interface EvaluationResult {
   flags: EvaluationFlag[];
   summary: string;
   evaluated_at: string;
+  ai_used: boolean;
+  ai_error?: string;
 }
 
 serve(async (req) => {
@@ -173,6 +177,8 @@ serve(async (req) => {
     let score: number;
     let recommendation: "suitable" | "unsuitable" | "review_required";
     let summary: string;
+    let aiUsed = false;
+    let aiError: string | undefined;
 
     if (hasHardDisqualifier) {
       score = 15;
@@ -201,9 +207,13 @@ serve(async (req) => {
     if (use_ai && recommendation === "review_required") {
       const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
       if (LOVABLE_API_KEY) {
+        console.log("Calling Lovable AI for deeper analysis...");
+        
+        // Create abort controller for timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), AI_TIMEOUT_MS);
+        
         try {
-          console.log("Calling Lovable AI for deeper analysis...");
-          
           const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
             method: "POST",
             headers: {
@@ -242,26 +252,48 @@ Provide your assessment.`,
                 },
               ],
             }),
+            signal: controller.signal,
           });
+
+          clearTimeout(timeoutId);
 
           if (aiResponse.ok) {
             const aiData = await aiResponse.json();
             const aiSummary = aiData.choices?.[0]?.message?.content;
             if (aiSummary) {
               summary = aiSummary;
+              aiUsed = true;
               console.log("AI analysis completed successfully");
             }
           } else if (aiResponse.status === 429) {
+            aiError = "Rate limit exceeded";
             console.error("AI rate limit exceeded (429), using rule-based summary");
+            summary += " [AI analysis unavailable: rate limit]";
           } else if (aiResponse.status === 402) {
+            aiError = "Payment required";
             console.error("AI payment required (402), using rule-based summary");
+            summary += " [AI analysis unavailable: payment required]";
           } else {
             const errorText = await aiResponse.text();
+            aiError = `API error (${aiResponse.status})`;
             console.error(`AI request failed (${aiResponse.status}): ${errorText}`);
+            summary += " [AI analysis unavailable]";
           }
-        } catch (aiError) {
-          console.error("AI analysis failed, using rule-based summary:", aiError);
+        } catch (aiErr) {
+          clearTimeout(timeoutId);
+          
+          if (aiErr instanceof Error && aiErr.name === "AbortError") {
+            aiError = "Request timeout (15s)";
+            console.error("AI analysis timed out after 15 seconds");
+            summary += " [AI analysis unavailable: timeout]";
+          } else {
+            aiError = aiErr instanceof Error ? aiErr.message : "Unknown error";
+            console.error("AI analysis failed, using rule-based summary:", aiErr);
+            summary += " [AI analysis unavailable]";
+          }
         }
+      } else {
+        console.log("LOVABLE_API_KEY not configured, skipping AI analysis");
       }
     }
 
@@ -271,6 +303,8 @@ Provide your assessment.`,
       flags,
       summary,
       evaluated_at: new Date().toISOString(),
+      ai_used: aiUsed,
+      ai_error: aiError,
     };
 
     // Update the submission with evaluation results (use UUID)
@@ -289,7 +323,7 @@ Provide your assessment.`,
       throw new Error(`Failed to update submission: ${updateError.message}`);
     }
 
-    console.log(`Evaluation complete: ${recommendation} (score: ${score})`);
+    console.log(`Evaluation complete: ${recommendation} (score: ${score}, ai_used: ${aiUsed})`);
 
     return new Response(JSON.stringify({ success: true, evaluation }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
