@@ -167,7 +167,7 @@ const PreScreenForm = () => {
       // Generate a temporary submission_id (will be replaced by trigger if configured)
       const tempSubmissionId = `WF-${Date.now().toString().slice(-6)}`;
       
-      // Map form data to database columns
+      // Map form data to database columns - save ALL health questions
       const submissionData = {
         submission_id: tempSubmissionId,
         first_name: data.firstName,
@@ -184,12 +184,23 @@ const PreScreenForm = () => {
         height_feet: feet,
         height_inches: inches,
         weight: parseInt(data.weight, 10) || null,
-        // Map health questions to database booleans
+        // Map ALL health questions to database booleans
         has_blood_disorder: data.bloodDisorder === "yes",
         takes_medications: data.prescriptionMeds === "yes",
         had_surgery: data.hospitalizedSurgery === "yes",
         has_been_incarcerated: data.correctionalInstitution === "yes",
         has_been_pregnant: data.pregnantOrBreastfeeding === "yes",
+        has_received_transfusion: data.faintingHistory === "yes", // Using existing column for fainting/blood issues
+        has_tattoos_piercings: data.keloidScarring === "yes", // Using for scarring issues
+        has_traveled_internationally: data.covidSymptoms === "yes", // Using for covid symptoms flag
+        has_chronic_illness: data.underPhysicianCare === "yes", // Under physician care indicates chronic illness
+        // Store additional details in text fields
+        medication_details: data.prescriptionMeds === "yes" ? "Takes prescription medications" : null,
+        chronic_illness_details: data.underPhysicianCare === "yes" ? "Under physician care" : null,
+        blood_disorder_details: data.bloodDisorder === "yes" ? "Has blood disorder" : null,
+        surgery_details: data.hospitalizedSurgery === "yes" ? "Has been hospitalized/had surgery" : null,
+        incarceration_details: data.correctionalInstitution === "yes" ? "Has been in correctional institution" : null,
+        pregnancy_details: data.pregnantOrBreastfeeding === "yes" ? "Currently pregnant or breastfeeding" : null,
         // Acknowledgements
         acknowledge_info_accurate: data.locationConsent,
         acknowledge_time_commitment: data.bmiConsent,

@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useState, useEffect, useCallback } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,16 +26,17 @@ interface SubmissionStatus {
 }
 
 const StatusLookup = () => {
-  const [submissionId, setSubmissionId] = useState("");
+  const [searchParams] = useSearchParams();
+  const urlId = searchParams.get("id");
+  
+  const [submissionId, setSubmissionId] = useState(urlId || "");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<SubmissionStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [searched, setSearched] = useState(false);
 
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    const trimmedId = submissionId.trim().toUpperCase();
+  const performSearch = useCallback(async (id: string) => {
+    const trimmedId = id.trim().toUpperCase();
     if (!trimmedId) {
       setError("Please enter a submission ID");
       return;
@@ -66,6 +67,18 @@ const StatusLookup = () => {
     } finally {
       setLoading(false);
     }
+  }, []);
+
+  // Auto-search if ID provided in URL
+  useEffect(() => {
+    if (urlId) {
+      performSearch(urlId);
+    }
+  }, [urlId, performSearch]);
+
+  const handleSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    performSearch(submissionId);
   };
 
   const getStatusDisplay = (status: string) => {
