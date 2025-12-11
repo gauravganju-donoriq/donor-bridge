@@ -47,8 +47,8 @@ const Appointments = () => {
   const fetchDonors = async () => {
     const { data } = await supabase
       .from("donors")
-      .select("id, donor_id, first_name, last_name")
-      .eq("eligibility_status", "eligible")
+      .select("id, donor_id, first_name, last_name, eligibility_status")
+      .in("eligibility_status", ["eligible", "pending_review"])
       .order("last_name");
     if (data) setDonors(data);
   };

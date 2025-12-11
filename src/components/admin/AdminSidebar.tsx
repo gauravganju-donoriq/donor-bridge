@@ -31,7 +31,8 @@ const navItems = [
   { to: "/admin/donor-approval", label: "Donor Approval", icon: ClipboardCheck },
   { to: "/admin/appointments", label: "Appointments", icon: Calendar },
   { to: "/admin/follow-ups", label: "Follow-Ups", icon: Phone },
-  { to: "/admin/reports", label: "Reports", icon: FileText },
+  // Reports module hidden until fully implemented
+  // { to: "/admin/reports", label: "Reports", icon: FileText },
 ];
 
 import { Mic } from "lucide-react";

@@ -205,6 +205,25 @@ const DonationResultsDialog = ({
 
         if (appointmentError) throw appointmentError;
 
+        // Auto-defer donor for 12 weeks after donation
+        const donationDate = new Date();
+        const nextEligibleDate = new Date(donationDate);
+        nextEligibleDate.setDate(nextEligibleDate.getDate() + 84); // 12 weeks = 84 days
+        
+        const { error: donorError } = await supabase
+          .from("donors")
+          .update({
+            eligibility_status: "ineligible",
+            last_donation_date: donationDate.toISOString().split('T')[0],
+            next_eligible_date: nextEligibleDate.toISOString().split('T')[0],
+            ineligibility_reason: "Temporary deferral: 12-week wait period after donation",
+          })
+          .eq("id", donorId);
+
+        if (donorError) {
+          console.error("Error updating donor eligibility:", donorError);
+        }
+
         // Auto-create follow-up task for mandatory post-donation call
         const { error: followUpError } = await supabase.from("follow_ups").insert({
           appointment_id: appointmentId,
@@ -218,7 +237,7 @@ const DonationResultsDialog = ({
 
         toast({
           title: "Results recorded",
-          description: "Donation results saved. A follow-up task has been created.",
+          description: "Donation results saved. Donor deferred for 12 weeks. Follow-up task created.",
         });
       }
 
