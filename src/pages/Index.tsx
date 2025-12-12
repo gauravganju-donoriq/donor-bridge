@@ -1,14 +1,23 @@
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { Heart, Shield, Clock, Search } from "lucide-react";
+import { Heart, Shield, Clock, Search, LogIn } from "lucide-react";
 
 const Index = () => {
   const navigate = useNavigate();
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Header */}
+      <header className="flex justify-between items-center px-4 py-4 max-w-6xl mx-auto">
+        <h2 className="text-xl font-bold text-foreground">Donor Bridge</h2>
+        <Button variant="outline" onClick={() => navigate("/admin/login")}>
+          <LogIn className="w-4 h-4 mr-2" />
+          Staff Login
+        </Button>
+      </header>
+
       {/* Hero Section */}
-      <section className="relative py-20 px-4 bg-gradient-to-br from-primary/10 via-background to-secondary/10">
+      <section className="relative py-16 px-4 bg-gradient-to-br from-primary/10 via-background to-secondary/10">
         <div className="max-w-4xl mx-auto text-center">
           <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-6">
             Become a Bone Marrow Donor
