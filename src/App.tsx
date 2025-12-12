@@ -14,6 +14,7 @@ import ConsentForm from "./pages/ConsentForm";
 
 // Admin imports
 import Login from "./pages/admin/Login";
+import ResetPassword from "./pages/admin/ResetPassword";
 import AdminLayout from "./components/admin/AdminLayout";
 import ProtectedRoute from "./components/admin/ProtectedRoute";
 import Dashboard from "./pages/admin/Dashboard";
@@ -48,6 +49,7 @@ const App = () => (
 
             {/* Admin Routes */}
             <Route path="/admin/login" element={<Login />} />
+            <Route path="/admin/reset-password" element={<ResetPassword />} />
             <Route
               path="/admin"
               element={
