@@ -84,6 +84,28 @@ const DonorFollowUps = ({ donorId, donorName }: DonorFollowUpsProps) => {
   useEffect(() => {
     fetchFollowUps();
     fetchAvailableAppointments();
+
+    // Subscribe to realtime updates on follow_ups table for this donor
+    const channel = supabase
+      .channel(`follow_ups_donor_${donorId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'follow_ups',
+          filter: `donor_id=eq.${donorId}`,
+        },
+        () => {
+          // Refetch on any change
+          fetchFollowUps();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [donorId]);
 
   const fetchFollowUps = async () => {
