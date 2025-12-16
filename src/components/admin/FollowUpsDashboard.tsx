@@ -309,12 +309,16 @@ const FollowUpsDashboard = () => {
     }
   };
 
-  const getUrgencyIndicator = (createdAt: string) => {
-    const daysSinceCreated = differenceInDays(new Date(), parseISO(createdAt));
-    if (daysSinceCreated > 3) {
+  const getUrgencyIndicator = (followUp: FollowUpWithDetails) => {
+    // Use appointment date (donation date) for urgency calculation
+    const referenceDate = followUp.appointments?.appointment_date 
+      ? parseISO(followUp.appointments.appointment_date) 
+      : parseISO(followUp.created_at);
+    const daysSince = differenceInDays(new Date(), referenceDate);
+    if (daysSince > 3) {
       return <AlertCircle className="h-4 w-4 text-destructive" />;
     }
-    if (daysSinceCreated > 1) {
+    if (daysSince > 1) {
       return <Clock className="h-4 w-4 text-amber-500" />;
     }
     return null;
@@ -334,7 +338,10 @@ const FollowUpsDashboard = () => {
     f.ai_call_status === "callback_requested" ||
     (f.ai_call_status === "completed" && f.ai_parsed_responses && (f.ai_parsed_responses as Record<string, unknown>).call_successful === false)
   ).length;
-  const overdueCount = followUps.filter(f => differenceInDays(new Date(), parseISO(f.created_at)) > 3).length;
+  const overdueCount = followUps.filter(f => {
+    const refDate = f.appointments?.appointment_date ? parseISO(f.appointments.appointment_date) : parseISO(f.created_at);
+    return differenceInDays(new Date(), refDate) > 3;
+  }).length;
 
   if (loading) {
     return (
@@ -425,7 +432,11 @@ const FollowUpsDashboard = () => {
               </TableHeader>
               <TableBody>
                 {followUps.map((followUp) => {
-                  const daysSince = differenceInDays(new Date(), parseISO(followUp.created_at));
+                  // Use appointment date (donation date) for Days Since calculation
+                  const referenceDate = followUp.appointments?.appointment_date 
+                    ? parseISO(followUp.appointments.appointment_date) 
+                    : parseISO(followUp.created_at);
+                  const daysSince = differenceInDays(new Date(), referenceDate);
                   const isAiCalling = callingId === followUp.id || 
                     followUp.ai_call_status === "initiated" || 
                     followUp.ai_call_status === "in_progress";
@@ -433,7 +444,7 @@ const FollowUpsDashboard = () => {
                   return (
                     <TableRow key={followUp.id}>
                       <TableCell>
-                        {getUrgencyIndicator(followUp.created_at)}
+                        {getUrgencyIndicator(followUp)}
                       </TableCell>
                       <TableCell>
                         <div
