@@ -477,16 +477,17 @@ const DonorFollowUps = ({ donorId, donorName }: DonorFollowUpsProps) => {
               <div className="space-y-2">
                 {followUps.map((followUp) => {
                   const isExpanded = expandedIds.has(followUp.id);
-                  const hasDetails = followUp.status === "completed" && (
+                  // Show details if completed with data OR if there's AI call data
+                  const hasCompletedDetails = followUp.status === "completed" && (
                     followUp.took_pain_medication !== null ||
                     followUp.checked_aspiration_sites !== null ||
                     followUp.signs_of_infection !== null ||
                     followUp.unusual_symptoms !== null ||
                     followUp.procedure_feedback ||
-                    followUp.notes ||
-                    followUp.ai_transcript ||
-                    followUp.ai_call_id
+                    followUp.notes
                   );
+                  const hasAiCallDetails = followUp.ai_call_id || followUp.ai_transcript;
+                  const hasDetails = hasCompletedDetails || hasAiCallDetails;
 
                   return (
                     <Collapsible
@@ -525,12 +526,18 @@ const DonorFollowUps = ({ donorId, donorName }: DonorFollowUpsProps) => {
                               {getUnifiedStatusBadge(followUp)}
                             </div>
                             <div className="text-sm">
-                              {followUp.pain_level ? (
+                              {followUp.ai_called_at ? (
+                                <span className="text-muted-foreground">
+                                  Called: {format(parseISO(followUp.ai_called_at), "MMM d, h:mm a")}
+                                </span>
+                              ) : followUp.pain_level ? (
                                 <span>Pain: {followUp.pain_level}→{followUp.current_pain_level || "?"}</span>
                               ) : "—"}
                             </div>
                             <div className="text-sm text-muted-foreground">
-                              {(followUp.staff_rating || followUp.nurse_rating || followUp.doctor_rating) ? (
+                              {followUp.ai_call_duration_ms ? (
+                                <span>Duration: {Math.round(followUp.ai_call_duration_ms / 1000)}s</span>
+                              ) : (followUp.staff_rating || followUp.nurse_rating || followUp.doctor_rating) ? (
                                 <span>
                                   {followUp.staff_rating && `S:${followUp.staff_rating}`}
                                   {followUp.nurse_rating && ` N:${followUp.nurse_rating}`}
@@ -544,6 +551,14 @@ const DonorFollowUps = ({ donorId, donorName }: DonorFollowUpsProps) => {
                               )}
                               {followUp.would_donate_again === false && (
                                 <Badge variant="destructive">Won't Donate</Badge>
+                              )}
+                              {/* Show callback reason preview if available */}
+                              {followUp.ai_parsed_responses && 
+                                typeof followUp.ai_parsed_responses === 'object' &&
+                                (followUp.ai_parsed_responses as Record<string, unknown>).callback_requested && (
+                                <span className="text-xs text-muted-foreground ml-1">
+                                  (expand for details)
+                                </span>
                               )}
                             </div>
                             <div className="text-right flex items-center gap-2 justify-end">
