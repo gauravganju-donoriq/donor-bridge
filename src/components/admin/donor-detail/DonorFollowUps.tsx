@@ -152,6 +152,8 @@ const DonorFollowUps = ({ donorId, donorName }: DonorFollowUpsProps) => {
         return <Badge variant="outline" className="border-orange-500 text-orange-600"><Phone className="h-3 w-3 mr-1" />Attempt 2</Badge>;
       case "email_sent":
         return <Badge variant="outline"><Mail className="h-3 w-3 mr-1" />Email Sent</Badge>;
+      case "callback_requested":
+        return <Badge className="bg-amber-500/10 text-amber-600 border-amber-500/20"><PhoneMissed className="h-3 w-3 mr-1" />Callback Requested</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -160,7 +162,17 @@ const DonorFollowUps = ({ donorId, donorName }: DonorFollowUpsProps) => {
   const getAiCallBadge = (followUp: FollowUp) => {
     if (!followUp.ai_call_id) return null;
     
-    // Check if callback was requested (call completed but donor asked to call back)
+    // Check if callback was requested via ai_call_status
+    if (followUp.ai_call_status === "callback_requested") {
+      return (
+        <Badge variant="outline" className="border-amber-500 text-amber-600">
+          <PhoneMissed className="h-3 w-3 mr-1" />
+          Callback Requested
+        </Badge>
+      );
+    }
+    
+    // Also check parsed responses for backward compatibility
     if (followUp.ai_call_status === "completed" && followUp.ai_parsed_responses) {
       const parsed = followUp.ai_parsed_responses as Record<string, unknown>;
       if (parsed.call_successful === false) {
@@ -301,6 +313,9 @@ const DonorFollowUps = ({ donorId, donorName }: DonorFollowUpsProps) => {
     
     // Show if AI call failed
     if (followUp.ai_call_status === "failed") return true;
+    
+    // Show if callback was requested via status
+    if (followUp.ai_call_status === "callback_requested" || followUp.status === "callback_requested") return true;
     
     // Show if donor asked to call back (ai_parsed_responses.call_successful === false)
     if (followUp.ai_parsed_responses && typeof followUp.ai_parsed_responses === 'object') {

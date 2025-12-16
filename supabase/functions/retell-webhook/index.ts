@@ -31,7 +31,7 @@ serve(async (req) => {
     // Find the follow-up by call ID
     const { data: followUp, error: findError } = await supabase
       .from("follow_ups")
-      .select("id, donor_id")
+      .select("id, donor_id, status")
       .eq("ai_call_id", call.call_id)
       .single();
 
@@ -69,9 +69,16 @@ serve(async (req) => {
           if (parsedResponses) {
             updateData.ai_parsed_responses = parsedResponses;
 
-            // If parsing was successful, mark as completed
-            if (parsedResponses.call_successful) {
+            // Check if call was successful or callback was requested
+            if (parsedResponses.call_successful === false) {
+              // Donor requested callback - set specific status and keep follow-up visible
+              updateData.ai_call_status = "callback_requested";
+              // Update follow-up status to callback_requested so it stays in the dashboard
+              updateData.status = "callback_requested";
+              console.log("Callback requested by donor - follow-up will remain visible in dashboard");
+            } else if (parsedResponses.call_successful === true) {
               updateData.ai_call_status = "completed";
+              // Don't auto-complete the follow-up - let staff review and apply data
             }
           }
         } catch (parseError) {
@@ -90,7 +97,7 @@ serve(async (req) => {
         .update(updateData)
         .eq("id", followUp.id);
 
-      console.log("Updated follow-up with call results");
+      console.log("Updated follow-up with call results:", JSON.stringify(updateData, null, 2));
     }
 
     return new Response(JSON.stringify({ received: true, processed: true }), {
@@ -116,7 +123,14 @@ async function parseTranscriptWithAI(transcript: string): Promise<Record<string,
   const systemPrompt = `You are an expert at parsing phone call transcripts from donor follow-up calls. 
 Extract structured data from the conversation. Return a JSON object with the following fields:
 
-- call_successful: boolean - true if the donor answered and completed the questionnaire
+- call_successful: boolean - true if the donor answered and completed the questionnaire. Set to FALSE if:
+  - The donor asked to be called back later
+  - The donor said they're busy or can't talk now
+  - The call was cut short before completing
+  - The donor didn't answer all the questions
+  - The donor explicitly requested a callback
+- callback_requested: boolean - true if the donor explicitly asked to be called back later
+- callback_reason: string or null - why they want to call back (busy, not feeling well, bad time, etc.)
 - pain_level: number (1-10) or null - pain during procedure
 - current_pain_level: number (1-10) or null - current pain level
 - doctor_rating: number (1-5) or null
@@ -135,7 +149,8 @@ Extract structured data from the conversation. Return a JSON object with the fol
 - concerns_flagged: boolean - true if donor mentioned serious concerns
 - summary: string - brief summary of the call
 
-Only include fields where you can confidently extract the data. Use null for unclear or missing information.`;
+Only include fields where you can confidently extract the data. Use null for unclear or missing information.
+IMPORTANT: If the conversation indicates the donor couldn't complete the call or asked to call back, set call_successful to false and callback_requested to true.`;
 
   try {
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {

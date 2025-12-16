@@ -1109,6 +1109,7 @@ export type Database = {
         | "attempted_2"
         | "completed"
         | "email_sent"
+        | "callback_requested"
       payment_type: "screening" | "donation"
       sex_type: "male" | "female"
       submission_status: "pending" | "approved" | "rejected" | "linked_to_donor"
@@ -1258,6 +1259,7 @@ export const Constants = {
         "attempted_2",
         "completed",
         "email_sent",
+        "callback_requested",
       ],
       payment_type: ["screening", "donation"],
       sex_type: ["male", "female"],
