@@ -236,7 +236,65 @@ const FollowUpsDashboard = () => {
     }
   };
 
-  const getStatusBadge = (status: FollowUpWithDetails["status"]) => {
+  // Unified status badge that combines follow-up status and AI call status
+  const getUnifiedStatusBadge = (followUp: FollowUpWithDetails) => {
+    const aiStatus = followUp.ai_call_status;
+    const status = followUp.status;
+    
+    // AI call in progress takes priority
+    if (aiStatus === "initiated" || aiStatus === "in_progress") {
+      return (
+        <Badge className="bg-blue-500/10 text-blue-600 border-blue-500/20">
+          <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+          AI Calling...
+        </Badge>
+      );
+    }
+    
+    // Callback requested (from AI call or status)
+    if (status === "callback_requested" || aiStatus === "callback_requested") {
+      return (
+        <Badge className="bg-amber-500/10 text-amber-600 border-amber-500/20">
+          <PhoneMissed className="h-3 w-3 mr-1" />
+          Callback Requested
+        </Badge>
+      );
+    }
+    
+    // Check parsed responses for callback (backward compatibility)
+    if (aiStatus === "completed" && followUp.ai_parsed_responses) {
+      const parsed = followUp.ai_parsed_responses as Record<string, unknown>;
+      if (parsed.call_successful === false) {
+        return (
+          <Badge className="bg-amber-500/10 text-amber-600 border-amber-500/20">
+            <PhoneMissed className="h-3 w-3 mr-1" />
+            Callback Requested
+          </Badge>
+        );
+      }
+    }
+    
+    // AI call failed
+    if (aiStatus === "failed") {
+      return (
+        <Badge variant="destructive">
+          <AlertCircle className="h-3 w-3 mr-1" />
+          AI Failed
+        </Badge>
+      );
+    }
+    
+    // AI call completed successfully
+    if (aiStatus === "completed") {
+      return (
+        <Badge className="bg-green-500/10 text-green-600 border-green-500/20">
+          <CheckCircle2 className="h-3 w-3 mr-1" />
+          AI Completed
+        </Badge>
+      );
+    }
+    
+    // Standard follow-up statuses (no AI call yet)
     switch (status) {
       case "pending":
         return <Badge variant="secondary">Pending</Badge>;
@@ -246,66 +304,8 @@ const FollowUpsDashboard = () => {
         return <Badge className="bg-orange-500/10 text-orange-600 border-orange-500/20">Attempt 2</Badge>;
       case "email_sent":
         return <Badge className="bg-blue-500/10 text-blue-600 border-blue-500/20">Email Sent</Badge>;
-      case "completed":
-        return <Badge className="bg-green-500/10 text-green-600 border-green-500/20">Completed</Badge>;
-      case "callback_requested":
-        return <Badge className="bg-amber-500/10 text-amber-600 border-amber-500/20"><PhoneMissed className="h-3 w-3 mr-1" />Callback Requested</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
-    }
-  };
-
-  const getAiCallBadge = (followUp: FollowUpWithDetails) => {
-    const status = followUp.ai_call_status;
-    
-    // Check if callback was requested via ai_call_status or parsed responses
-    if (status === "callback_requested") {
-      return (
-        <Badge variant="outline" className="border-amber-500 text-amber-600">
-          <PhoneMissed className="h-3 w-3 mr-1" />
-          Callback Requested
-        </Badge>
-      );
-    }
-    
-    // Also check parsed responses for backward compatibility
-    if (status === "completed" && followUp.ai_parsed_responses) {
-      const parsed = followUp.ai_parsed_responses as Record<string, unknown>;
-      if (parsed.call_successful === false) {
-        return (
-          <Badge variant="outline" className="border-amber-500 text-amber-600">
-            <PhoneMissed className="h-3 w-3 mr-1" />
-            Callback Requested
-          </Badge>
-        );
-      }
-    }
-    
-    switch (status) {
-      case "initiated":
-      case "in_progress":
-        return (
-          <Badge className="bg-blue-500/10 text-blue-600 border-blue-500/20">
-            <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-            Calling...
-          </Badge>
-        );
-      case "completed":
-        return (
-          <Badge className="bg-green-500/10 text-green-600 border-green-500/20">
-            <CheckCircle2 className="h-3 w-3 mr-1" />
-            AI Completed
-          </Badge>
-        );
-      case "failed":
-        return (
-          <Badge variant="destructive">
-            <AlertCircle className="h-3 w-3 mr-1" />
-            AI Failed
-          </Badge>
-        );
-      default:
-        return null;
     }
   };
 
@@ -420,7 +420,6 @@ const FollowUpsDashboard = () => {
                   <TableHead>Donation Date</TableHead>
                   <TableHead>Days Since</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>AI Status</TableHead>
                   <TableHead></TableHead>
                 </TableRow>
               </TableHeader>
@@ -471,10 +470,7 @@ const FollowUpsDashboard = () => {
                         </span>
                       </TableCell>
                       <TableCell>
-                        {getStatusBadge(followUp.status)}
-                      </TableCell>
-                      <TableCell>
-                        {getAiCallBadge(followUp)}
+                        {getUnifiedStatusBadge(followUp)}
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
