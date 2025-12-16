@@ -23,7 +23,7 @@ interface FollowUpWithDetails {
   id: string;
   appointment_id: string;
   donor_id: string;
-  status: "pending" | "attempted_1" | "attempted_2" | "completed" | "email_sent";
+  status: "pending" | "attempted_1" | "attempted_2" | "completed" | "email_sent" | "callback_requested";
   pain_level: number | null;
   procedure_feedback: string | null;
   would_donate_again: boolean | null;
@@ -181,6 +181,9 @@ const FollowUpsDashboard = () => {
 
     const parsed = selectedAiFollowUp.ai_parsed_responses;
     
+    // Check if callback was requested
+    const callbackRequested = parsed.call_successful === false || parsed.callback_requested === true;
+    
     try {
       const updateData: Record<string, unknown> = {};
       
@@ -200,9 +203,11 @@ const FollowUpsDashboard = () => {
       if (parsed.would_donate_again !== undefined) updateData.would_donate_again = parsed.would_donate_again;
       if (parsed.procedure_feedback !== undefined) updateData.procedure_feedback = parsed.procedure_feedback;
 
-      // Mark as completed
-      updateData.status = "completed";
-      updateData.completed_at = new Date().toISOString();
+      // Only mark as completed if callback was NOT requested
+      if (!callbackRequested) {
+        updateData.status = "completed";
+        updateData.completed_at = new Date().toISOString();
+      }
 
       const { error } = await supabase
         .from("follow_ups")
@@ -212,8 +217,10 @@ const FollowUpsDashboard = () => {
       if (error) throw error;
 
       toast({
-        title: "Data applied",
-        description: "AI-collected data has been applied and follow-up marked complete.",
+        title: callbackRequested ? "Partial data applied" : "Data applied",
+        description: callbackRequested 
+          ? "AI-collected data has been saved. Follow-up remains pending as donor requested callback." 
+          : "AI-collected data has been applied and follow-up marked complete.",
       });
 
       setAiDetailsOpen(false);
@@ -241,6 +248,8 @@ const FollowUpsDashboard = () => {
         return <Badge className="bg-blue-500/10 text-blue-600 border-blue-500/20">Email Sent</Badge>;
       case "completed":
         return <Badge className="bg-green-500/10 text-green-600 border-green-500/20">Completed</Badge>;
+      case "callback_requested":
+        return <Badge className="bg-amber-500/10 text-amber-600 border-amber-500/20"><PhoneMissed className="h-3 w-3 mr-1" />Callback Requested</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -249,7 +258,17 @@ const FollowUpsDashboard = () => {
   const getAiCallBadge = (followUp: FollowUpWithDetails) => {
     const status = followUp.ai_call_status;
     
-    // Check if callback was requested (call completed but donor asked to call back)
+    // Check if callback was requested via ai_call_status or parsed responses
+    if (status === "callback_requested") {
+      return (
+        <Badge variant="outline" className="border-amber-500 text-amber-600">
+          <PhoneMissed className="h-3 w-3 mr-1" />
+          Callback Requested
+        </Badge>
+      );
+    }
+    
+    // Also check parsed responses for backward compatibility
     if (status === "completed" && followUp.ai_parsed_responses) {
       const parsed = followUp.ai_parsed_responses as Record<string, unknown>;
       if (parsed.call_successful === false) {
@@ -310,6 +329,11 @@ const FollowUpsDashboard = () => {
   const pendingCount = followUps.filter(f => f.status === "pending").length;
   const attemptedCount = followUps.filter(f => f.status === "attempted_1" || f.status === "attempted_2").length;
   const emailSentCount = followUps.filter(f => f.status === "email_sent").length;
+  const callbackRequestedCount = followUps.filter(f => 
+    f.status === "callback_requested" || 
+    f.ai_call_status === "callback_requested" ||
+    (f.ai_call_status === "completed" && f.ai_parsed_responses && (f.ai_parsed_responses as Record<string, unknown>).call_successful === false)
+  ).length;
   const overdueCount = followUps.filter(f => differenceInDays(new Date(), parseISO(f.created_at)) > 3).length;
 
   if (loading) {
@@ -324,7 +348,7 @@ const FollowUpsDashboard = () => {
   return (
     <div className="space-y-6">
       {/* Summary Cards */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-5 gap-4">
         <Card>
           <CardContent className="pt-4">
             <div className="flex items-center gap-2">
@@ -332,6 +356,15 @@ const FollowUpsDashboard = () => {
               <span className="text-sm text-muted-foreground">Pending Calls</span>
             </div>
             <div className="text-xl font-semibold mt-1">{pendingCount}</div>
+          </CardContent>
+        </Card>
+        <Card className={callbackRequestedCount > 0 ? "border-amber-500/50" : ""}>
+          <CardContent className="pt-4">
+            <div className="flex items-center gap-2">
+              <PhoneMissed className="h-4 w-4 text-amber-500" />
+              <span className="text-sm text-muted-foreground">Callback Requested</span>
+            </div>
+            <div className="text-xl font-semibold text-amber-600 mt-1">{callbackRequestedCount}</div>
           </CardContent>
         </Card>
         <Card>
@@ -448,6 +481,8 @@ const FollowUpsDashboard = () => {
                           {/* Show Retry button for failed calls or callback requested */}
                           {voiceAiEnabled && followUp.donors?.cell_phone && (
                             followUp.ai_call_status === "failed" || 
+                            followUp.ai_call_status === "callback_requested" ||
+                            followUp.status === "callback_requested" ||
                             (followUp.ai_call_status === "completed" && 
                               followUp.ai_parsed_responses && 
                               (followUp.ai_parsed_responses as Record<string, unknown>).call_successful === false)
