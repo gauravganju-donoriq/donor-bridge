@@ -188,22 +188,18 @@ const Donors = () => {
     if (!donorToDelete) return;
 
     try {
-      // First, unlink any webform submissions that reference this donor
-      const { error: unlinkError } = await supabase
+      // First, unlink webform submissions (set linked_donor_id to null instead of deleting)
+      // This avoids foreign key constraint issues
+      await supabase
         .from("webform_submissions")
-        .update({ linked_donor_id: null, status: "pending" })
+        .update({ linked_donor_id: null })
         .eq("linked_donor_id", donorToDelete.id);
 
-      if (unlinkError) {
-        console.warn("Error unlinking submissions:", unlinkError);
-        // Continue anyway - the submissions might not exist
-      }
-
       // Delete related records that have foreign key constraints
+      // Delete follow-ups first (references appointments)
+      await supabase.from("follow_ups").delete().eq("donor_id", donorToDelete.id);
       // Delete appointments
       await supabase.from("appointments").delete().eq("donor_id", donorToDelete.id);
-      // Delete follow-ups
-      await supabase.from("donor_follow_ups").delete().eq("donor_id", donorToDelete.id);
       // Delete consents
       await supabase.from("donor_consents").delete().eq("donor_id", donorToDelete.id);
       // Delete documents

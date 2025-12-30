@@ -31,14 +31,14 @@ const SignaturePad = forwardRef<SignaturePadRef, SignaturePadProps>(
         const containerWidth = containerRef.current?.clientWidth || width;
         const canvasWidth = Math.min(containerWidth - 4, width); // -4 for border
 
-        const canvas = new FabricCanvas(canvasRef.current, {
+      const canvas = new FabricCanvas(canvasRef.current, {
           width: canvasWidth,
-          height,
-          backgroundColor: "#ffffff",
-          isDrawingMode: true,
+        height,
+        backgroundColor: "#ffffff",
+        isDrawingMode: true,
           selection: false,
           renderOnAddRemove: true,
-        });
+      });
 
         // Create and configure the brush
         const brush = new PencilBrush(canvas);
@@ -47,9 +47,9 @@ const SignaturePad = forwardRef<SignaturePadRef, SignaturePadProps>(
         canvas.freeDrawingBrush = brush;
 
         // Track drawing
-        canvas.on("path:created", () => {
-          setHasDrawn(true);
-        });
+      canvas.on("path:created", () => {
+        setHasDrawn(true);
+      });
 
         // Store reference
         fabricRef.current = canvas;

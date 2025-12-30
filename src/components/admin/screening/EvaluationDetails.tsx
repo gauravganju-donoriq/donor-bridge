@@ -84,7 +84,7 @@ export const EvaluationDetails = ({
     if (ruleType === "hard_disqualify") {
       return <Shield className="h-4 w-4 text-destructive" />;
     }
-    return <AlertTriangle className="h-4 w-4 text-yellow-500" />;
+        return <AlertTriangle className="h-4 w-4 text-yellow-500" />;
   };
 
   const displayFlags = flags || evaluation?.flags || [];
@@ -145,16 +145,16 @@ export const EvaluationDetails = ({
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Action Button */}
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => handleEvaluate(false)}
-          disabled={evaluating}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handleEvaluate(false)}
+            disabled={evaluating}
           className="w-full"
-        >
-          <RefreshCw className={`h-4 w-4 mr-2 ${evaluating ? "animate-spin" : ""}`} />
-          {evaluating ? "Evaluating..." : displayRecommendation ? "Re-evaluate" : "Evaluate Now"}
-        </Button>
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${evaluating ? "animate-spin" : ""}`} />
+            {evaluating ? "Evaluating..." : displayRecommendation ? "Re-evaluate" : "Evaluate Now"}
+          </Button>
 
         {/* Summary */}
         {displaySummary && (

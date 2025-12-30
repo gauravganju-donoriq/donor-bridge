@@ -333,9 +333,9 @@ const PaymentEntryDialog = ({
         </div>
 
         <DialogFooter className="flex justify-between sm:justify-between">
-          <Button variant="outline" onClick={handleClear}>
-            Clear
-          </Button>
+            <Button variant="outline" onClick={handleClear}>
+              Clear
+            </Button>
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               Cancel

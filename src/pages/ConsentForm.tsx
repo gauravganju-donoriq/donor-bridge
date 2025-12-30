@@ -276,10 +276,10 @@ const ConsentForm = () => {
           // Try uploading as binary data (most permissive mime type)
           const fileName = `${consentData.donor.id}/consent_${consent.consent_type}_${Date.now()}.dat`;
           const blob = new Blob([htmlContent], { type: 'application/octet-stream' });
-          
-          const { error: uploadError } = await supabase.storage
-            .from("donor-documents")
-            .upload(fileName, blob);
+        
+        const { error: uploadError } = await supabase.storage
+          .from("donor-documents")
+          .upload(fileName, blob);
 
           if (!uploadError) {
             documentPath = fileName;

@@ -388,20 +388,20 @@ const ScreeningRules = () => {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="rule_type">Rule Type *</Label>
-              <Select
-                value={formData.rule_type}
-                onValueChange={(v) => setFormData({ ...formData, rule_type: v })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="hard_disqualify">Hard Disqualify</SelectItem>
-                  <SelectItem value="soft_flag">Soft Flag</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="space-y-2">
+                <Label htmlFor="rule_type">Rule Type *</Label>
+                <Select
+                  value={formData.rule_type}
+                  onValueChange={(v) => setFormData({ ...formData, rule_type: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="hard_disqualify">Hard Disqualify</SelectItem>
+                    <SelectItem value="soft_flag">Soft Flag</SelectItem>
+                  </SelectContent>
+                </Select>
             </div>
 
             <div className="space-y-2">
