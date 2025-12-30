@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Brain, Shield, AlertTriangle, Info, RefreshCw, Sparkles, Zap } from "lucide-react";
+import { Brain, Shield, AlertTriangle, RefreshCw, Zap, Info } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -62,7 +62,7 @@ export const EvaluationDetails = ({
       if (data?.success) {
         toast({
           title: "Evaluation Complete",
-          description: `Recommendation: ${data.evaluation.recommendation} (Score: ${data.evaluation.score})`,
+          description: `Recommendation: ${data.evaluation.recommendation}`,
         });
         onEvaluationComplete();
       } else {
@@ -80,33 +80,11 @@ export const EvaluationDetails = ({
     }
   };
 
-  const getSeverityIcon = (severity: string, ruleType: string) => {
+  const getRuleTypeIcon = (ruleType: string) => {
     if (ruleType === "hard_disqualify") {
       return <Shield className="h-4 w-4 text-destructive" />;
     }
-    switch (severity) {
-      case "critical":
-        return <Shield className="h-4 w-4 text-destructive" />;
-      case "high":
-        return <AlertTriangle className="h-4 w-4 text-orange-500" />;
-      case "medium":
-        return <AlertTriangle className="h-4 w-4 text-yellow-500" />;
-      default:
-        return <Info className="h-4 w-4 text-blue-500" />;
-    }
-  };
-
-  const getSeverityBadge = (severity: string) => {
-    switch (severity) {
-      case "critical":
-        return <Badge variant="destructive" className="text-xs">Critical</Badge>;
-      case "high":
-        return <Badge className="bg-orange-500/10 text-orange-600 text-xs">High</Badge>;
-      case "medium":
-        return <Badge className="bg-yellow-500/10 text-yellow-600 text-xs">Medium</Badge>;
-      default:
-        return <Badge className="bg-blue-500/10 text-blue-600 text-xs">Low</Badge>;
-    }
+    return <AlertTriangle className="h-4 w-4 text-yellow-500" />;
   };
 
   const displayFlags = flags || evaluation?.flags || [];
@@ -152,7 +130,7 @@ export const EvaluationDetails = ({
           </CardTitle>
           <div className="flex items-center gap-2">
             {displayRecommendation && (
-              <EvaluationBadge recommendation={displayRecommendation} score={displayScore} showScore />
+              <EvaluationBadge recommendation={displayRecommendation} />
             )}
           </div>
         </div>
@@ -166,31 +144,17 @@ export const EvaluationDetails = ({
         )}
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Action Buttons */}
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => handleEvaluate(false)}
-            disabled={evaluating}
-            className="flex-1"
-          >
-            <RefreshCw className={`h-4 w-4 mr-2 ${evaluating ? "animate-spin" : ""}`} />
-            {evaluating ? "Evaluating..." : displayRecommendation ? "Re-evaluate" : "Evaluate Now"}
-          </Button>
-          {displayRecommendation === "review_required" && (
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => handleEvaluate(true)}
-              disabled={evaluating}
-              className="flex-1"
-            >
-              <Sparkles className="h-4 w-4 mr-2" />
-              AI Analysis
-            </Button>
-          )}
-        </div>
+        {/* Action Button */}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => handleEvaluate(false)}
+          disabled={evaluating}
+          className="w-full"
+        >
+          <RefreshCw className={`h-4 w-4 mr-2 ${evaluating ? "animate-spin" : ""}`} />
+          {evaluating ? "Evaluating..." : displayRecommendation ? "Re-evaluate" : "Evaluate Now"}
+        </Button>
 
         {/* Summary */}
         {displaySummary && (
@@ -211,11 +175,10 @@ export const EvaluationDetails = ({
                     key={index}
                     className="flex items-start gap-3 p-2 rounded-lg border bg-card"
                   >
-                    {getSeverityIcon(flag.severity, flag.rule_type)}
+                    {getRuleTypeIcon(flag.rule_type)}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-medium text-sm">{flag.rule_name}</span>
-                        {getSeverityBadge(flag.severity)}
                         {flag.rule_type === "hard_disqualify" && (
                           <Badge variant="destructive" className="text-xs">Disqualifier</Badge>
                         )}

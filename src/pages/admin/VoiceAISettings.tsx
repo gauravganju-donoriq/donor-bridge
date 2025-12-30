@@ -278,7 +278,7 @@ const VoiceAISettings = () => {
               />
             </div>
             <div className="space-y-2">
-              <Label>Doctor Rating (1-5)</Label>
+              <Label>Doctor Rating (1-10)</Label>
               <Textarea
                 value={settings.question_doctor_rating}
                 onChange={(e) => setSettings({ ...settings, question_doctor_rating: e.target.value })}
@@ -286,7 +286,7 @@ const VoiceAISettings = () => {
               />
             </div>
             <div className="space-y-2">
-              <Label>Nurse Rating (1-5)</Label>
+              <Label>Nurse Rating (1-10)</Label>
               <Textarea
                 value={settings.question_nurse_rating}
                 onChange={(e) => setSettings({ ...settings, question_nurse_rating: e.target.value })}
@@ -294,7 +294,7 @@ const VoiceAISettings = () => {
               />
             </div>
             <div className="space-y-2">
-              <Label>Staff Rating (1-5)</Label>
+              <Label>Staff Rating (1-10)</Label>
               <Textarea
                 value={settings.question_staff_rating}
                 onChange={(e) => setSettings({ ...settings, question_staff_rating: e.target.value })}

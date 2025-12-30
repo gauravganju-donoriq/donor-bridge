@@ -1,19 +1,16 @@
 import { useState, useEffect } from "react";
 import {
-  Settings,
   Plus,
   Pencil,
   Trash2,
   Shield,
   AlertTriangle,
-  CheckCircle,
   Info,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -282,42 +279,6 @@ const ScreeningRules = () => {
     }
   };
 
-  const getSeverityBadge = (severity: string) => {
-    switch (severity) {
-      case "critical":
-        return <Badge variant="destructive">Critical</Badge>;
-      case "high":
-        return <Badge className="bg-orange-500/10 text-orange-600 border-orange-200">High</Badge>;
-      case "medium":
-        return <Badge className="bg-yellow-500/10 text-yellow-600 border-yellow-200">Medium</Badge>;
-      case "low":
-        return <Badge className="bg-blue-500/10 text-blue-600 border-blue-200">Low</Badge>;
-      default:
-        return <Badge variant="outline">{severity}</Badge>;
-    }
-  };
-
-  const getRuleTypeBadge = (type: string) => {
-    switch (type) {
-      case "hard_disqualify":
-        return (
-          <Badge variant="destructive" className="gap-1">
-            <Shield className="h-3 w-3" />
-            Hard Disqualify
-          </Badge>
-        );
-      case "soft_flag":
-        return (
-          <Badge variant="secondary" className="gap-1">
-            <AlertTriangle className="h-3 w-3" />
-            Soft Flag
-          </Badge>
-        );
-      default:
-        return <Badge variant="outline">{type}</Badge>;
-    }
-  };
-
   const hardRules = rules.filter(r => r.rule_type === "hard_disqualify");
   const softRules = rules.filter(r => r.rule_type === "soft_flag");
 
@@ -367,8 +328,6 @@ const ScreeningRules = () => {
             onEdit={openEditDialog}
             onDelete={(rule) => { setSelectedRule(rule); setDeleteDialogOpen(true); }}
             onToggle={handleToggleActive}
-            getSeverityBadge={getSeverityBadge}
-            getRuleTypeBadge={getRuleTypeBadge}
             isAdmin={isAdmin}
           />
         </CardContent>
@@ -392,8 +351,6 @@ const ScreeningRules = () => {
             onEdit={openEditDialog}
             onDelete={(rule) => { setSelectedRule(rule); setDeleteDialogOpen(true); }}
             onToggle={handleToggleActive}
-            getSeverityBadge={getSeverityBadge}
-            getRuleTypeBadge={getRuleTypeBadge}
             isAdmin={isAdmin}
           />
         </CardContent>
@@ -431,39 +388,20 @@ const ScreeningRules = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="rule_type">Rule Type *</Label>
-                <Select
-                  value={formData.rule_type}
-                  onValueChange={(v) => setFormData({ ...formData, rule_type: v })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="hard_disqualify">Hard Disqualify</SelectItem>
-                    <SelectItem value="soft_flag">Soft Flag</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="severity">Severity *</Label>
-                <Select
-                  value={formData.severity}
-                  onValueChange={(v) => setFormData({ ...formData, severity: v })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="critical">Critical</SelectItem>
-                    <SelectItem value="high">High</SelectItem>
-                    <SelectItem value="medium">Medium</SelectItem>
-                    <SelectItem value="low">Low</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="rule_type">Rule Type *</Label>
+              <Select
+                value={formData.rule_type}
+                onValueChange={(v) => setFormData({ ...formData, rule_type: v })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="hard_disqualify">Hard Disqualify</SelectItem>
+                  <SelectItem value="soft_flag">Soft Flag</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">
@@ -574,8 +512,6 @@ const RulesTable = ({
   onEdit,
   onDelete,
   onToggle,
-  getSeverityBadge,
-  getRuleTypeBadge,
   isAdmin,
 }: {
   rules: ScreeningRule[];
@@ -583,8 +519,6 @@ const RulesTable = ({
   onEdit: (rule: ScreeningRule) => void;
   onDelete: (rule: ScreeningRule) => void;
   onToggle: (rule: ScreeningRule) => void;
-  getSeverityBadge: (severity: string) => JSX.Element;
-  getRuleTypeBadge: (type: string) => JSX.Element;
   isAdmin: boolean;
 }) => (
   <Table>
@@ -593,7 +527,6 @@ const RulesTable = ({
         <TableHead className="w-[50px]">Active</TableHead>
         <TableHead>Rule</TableHead>
         <TableHead className="hidden md:table-cell">Condition</TableHead>
-        <TableHead className="hidden sm:table-cell">Severity</TableHead>
         {isAdmin && <TableHead className="w-[100px]">Actions</TableHead>}
       </TableRow>
     </TableHeader>
@@ -604,13 +537,12 @@ const RulesTable = ({
             <TableCell><Skeleton className="h-6 w-10" /></TableCell>
             <TableCell><Skeleton className="h-4 w-32" /></TableCell>
             <TableCell className="hidden md:table-cell"><Skeleton className="h-4 w-24" /></TableCell>
-            <TableCell className="hidden sm:table-cell"><Skeleton className="h-5 w-16" /></TableCell>
             {isAdmin && <TableCell><Skeleton className="h-8 w-20" /></TableCell>}
           </TableRow>
         ))
       ) : rules.length === 0 ? (
         <TableRow>
-          <TableCell colSpan={isAdmin ? 5 : 4} className="h-24 text-center text-muted-foreground">
+          <TableCell colSpan={isAdmin ? 4 : 3} className="h-24 text-center text-muted-foreground">
             No rules configured
           </TableCell>
         </TableRow>
@@ -635,9 +567,6 @@ const RulesTable = ({
             <TableCell className="hidden md:table-cell font-mono text-sm">
               {FIELD_OPTIONS.find(f => f.value === rule.field_path)?.label || rule.field_path}{" "}
               {rule.rule_value.operator} {String(rule.rule_value.value)}
-            </TableCell>
-            <TableCell className="hidden sm:table-cell">
-              {getSeverityBadge(rule.severity)}
             </TableCell>
             {isAdmin && (
               <TableCell>

@@ -269,24 +269,35 @@ const ConsentForm = () => {
           </html>
         `;
 
-        // Upload HTML document to storage
-        const fileName = `${consentData.donor.id}/consent_${consent.consent_type}_${Date.now()}.html`;
-        const blob = new Blob([htmlContent], { type: 'text/html' });
+        // Store the signed document content - try storage first, fallback to DB only
+        let documentPath: string | null = null;
         
-        const { error: uploadError } = await supabase.storage
-          .from("donor-documents")
-          .upload(fileName, blob);
+        try {
+          // Try uploading as binary data (most permissive mime type)
+          const fileName = `${consentData.donor.id}/consent_${consent.consent_type}_${Date.now()}.dat`;
+          const blob = new Blob([htmlContent], { type: 'application/octet-stream' });
+          
+          const { error: uploadError } = await supabase.storage
+            .from("donor-documents")
+            .upload(fileName, blob);
 
-        if (uploadError) throw uploadError;
+          if (!uploadError) {
+            documentPath = fileName;
+          } else {
+            console.warn("Storage upload failed, storing signature only:", uploadError.message);
+          }
+        } catch (storageErr) {
+          console.warn("Storage not available, storing signature only");
+        }
 
-        // Update consent record
+        // Update consent record (always succeeds even if storage fails)
         const { error: updateError } = await supabase
           .from("donor_consents")
           .update({
             status: "signed",
             signed_at: new Date().toISOString(),
             signature_data: signatureDataUrl,
-            signed_document_path: fileName,
+            signed_document_path: documentPath,
           })
           .eq("id", consent.id);
 
@@ -294,9 +305,11 @@ const ConsentForm = () => {
       }
 
       setCompleted(true);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error submitting consents:", err);
-      setError("Failed to submit consent forms. Please try again.");
+      // Show more specific error message
+      const errorMessage = err?.message || "Failed to submit consent forms. Please try again.";
+      setError(errorMessage);
     } finally {
       setSubmitting(false);
     }

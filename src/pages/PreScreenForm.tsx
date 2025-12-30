@@ -19,7 +19,14 @@ const formSchema = z.object({
   // Step 1: Contact Info
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
-  phone: z.string().min(14, "Valid phone number is required"),
+  phone: z.string().min(10, "Valid phone number is required").refine((val) => {
+    // Remove all non-digits except leading +
+    const cleaned = val.startsWith('+') ? val.replace(/[^\d+]/g, '') : val.replace(/\D/g, '');
+    // US: 10 digits, India: +91 + 10 digits, other intl: at least 10 digits
+    if (cleaned.startsWith('+91')) return cleaned.length >= 13; // +91 + 10 digits
+    if (cleaned.startsWith('+')) return cleaned.length >= 11; // + + country code + number
+    return cleaned.length >= 10; // US format
+  }, "Valid phone number is required"),
   email: z.string().email("Valid email is required"),
   streetAddress: z.string().min(1, "Street address is required"),
   addressLine2: z.string().optional(),

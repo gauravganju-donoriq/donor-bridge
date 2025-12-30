@@ -569,14 +569,20 @@ const DonorFollowUps = ({ donorId, donorName }: DonorFollowUpsProps) => {
                                   variant="outline"
                                   onClick={() => handleRetryAiCall(followUp.id)}
                                   disabled={retryingCallId === followUp.id}
-                                  className="text-primary"
+                                  className={followUp.ai_call_status === "callback_requested" || followUp.status === "callback_requested" 
+                                    ? "text-amber-600 border-amber-500 hover:bg-amber-50" 
+                                    : "text-primary"
+                                  }
                                 >
                                   {retryingCallId === followUp.id ? (
                                     <Loader2 className="h-4 w-4 mr-1 animate-spin" />
                                   ) : (
-                                    <Bot className="h-4 w-4 mr-1" />
+                                    <Phone className="h-4 w-4 mr-1" />
                                   )}
-                                  {followUp.ai_call_id ? "Retry" : "AI Call"}
+                                  {followUp.ai_call_status === "callback_requested" || followUp.status === "callback_requested" 
+                                    ? "Callback" 
+                                    : followUp.ai_call_id ? "Retry" : "AI Call"
+                                  }
                                 </Button>
                               )}
                               {followUp.status === "completed" ? (
@@ -665,13 +671,20 @@ const DonorFollowUps = ({ donorId, donorName }: DonorFollowUpsProps) => {
                                         variant="outline"
                                         onClick={() => handleRetryAiCall(followUp.id)}
                                         disabled={retryingCallId === followUp.id}
+                                        className={followUp.ai_call_status === "callback_requested" || followUp.status === "callback_requested" 
+                                          ? "text-amber-600 border-amber-500 hover:bg-amber-50" 
+                                          : ""
+                                        }
                                       >
                                         {retryingCallId === followUp.id ? (
                                           <Loader2 className="h-4 w-4 mr-1 animate-spin" />
                                         ) : (
-                                          <RotateCcw className="h-4 w-4 mr-1" />
+                                          <Phone className="h-4 w-4 mr-1" />
                                         )}
-                                        Retry AI Call
+                                        {followUp.ai_call_status === "callback_requested" || followUp.status === "callback_requested" 
+                                          ? "Callback Donor" 
+                                          : "Retry AI Call"
+                                        }
                                       </Button>
                                     )}
                                   </div>

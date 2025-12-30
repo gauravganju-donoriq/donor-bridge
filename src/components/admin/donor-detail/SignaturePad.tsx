@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState, forwardRef, useImperativeHandle } from "react";
-import { Canvas as FabricCanvas } from "fabric";
+import { useEffect, useRef, useState, forwardRef, useImperativeHandle, useCallback } from "react";
+import { Canvas as FabricCanvas, PencilBrush } from "fabric";
 import { Button } from "@/components/ui/button";
 import { Eraser } from "lucide-react";
 
@@ -16,88 +16,147 @@ interface SignaturePadProps {
 
 const SignaturePad = forwardRef<SignaturePadRef, SignaturePadProps>(
   ({ width = 500, height = 150 }, ref) => {
+    const containerRef = useRef<HTMLDivElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
-    const [fabricCanvas, setFabricCanvas] = useState<FabricCanvas | null>(null);
+    const fabricRef = useRef<FabricCanvas | null>(null);
     const [hasDrawn, setHasDrawn] = useState(false);
-    const [mounted, setMounted] = useState(false);
+    const [isReady, setIsReady] = useState(false);
 
-    // Wait for DOM to be ready before initializing fabric
-    useEffect(() => {
-      const frameId = requestAnimationFrame(() => {
-        setMounted(true);
-      });
-      return () => cancelAnimationFrame(frameId);
-    }, []);
+    // Initialize fabric canvas
+    const initCanvas = useCallback(() => {
+      if (!canvasRef.current || fabricRef.current) return;
 
-    useEffect(() => {
-      if (!mounted || !canvasRef.current) return;
+      try {
+        // Get container width for responsive sizing
+        const containerWidth = containerRef.current?.clientWidth || width;
+        const canvasWidth = Math.min(containerWidth - 4, width); // -4 for border
 
-      const canvas = new FabricCanvas(canvasRef.current, {
-        width,
-        height,
-        backgroundColor: "#ffffff",
-        isDrawingMode: true,
-      });
+        const canvas = new FabricCanvas(canvasRef.current, {
+          width: canvasWidth,
+          height,
+          backgroundColor: "#ffffff",
+          isDrawingMode: true,
+          selection: false,
+          renderOnAddRemove: true,
+        });
 
-      // Configure drawing brush
-      if (canvas.freeDrawingBrush) {
-        canvas.freeDrawingBrush.color = "#000000";
-        canvas.freeDrawingBrush.width = 2;
+        // Create and configure the brush
+        const brush = new PencilBrush(canvas);
+        brush.color = "#000000";
+        brush.width = 2;
+        canvas.freeDrawingBrush = brush;
+
+        // Track drawing
+        canvas.on("path:created", () => {
+          setHasDrawn(true);
+        });
+
+        // Store reference
+        fabricRef.current = canvas;
+        setIsReady(true);
+
+        // Force a render
+        canvas.renderAll();
+      } catch (err) {
+        console.error("Failed to initialize signature canvas:", err);
       }
+    }, [width, height]);
 
-      // Track when user draws
-      canvas.on("path:created", () => {
-        setHasDrawn(true);
-      });
-
-      setFabricCanvas(canvas);
+    // Initialize after mount with delay to ensure DOM is ready
+    useEffect(() => {
+      const timer = setTimeout(() => {
+        initCanvas();
+      }, 100);
 
       return () => {
-        canvas.dispose();
+        clearTimeout(timer);
+        if (fabricRef.current) {
+          fabricRef.current.dispose();
+          fabricRef.current = null;
+        }
       };
-    }, [mounted, width, height]);
+    }, [initCanvas]);
+
+    // Handle resize
+    useEffect(() => {
+      const handleResize = () => {
+        if (!fabricRef.current || !containerRef.current) return;
+        
+        const containerWidth = containerRef.current.clientWidth;
+        const canvasWidth = Math.min(containerWidth - 4, width);
+        
+        fabricRef.current.setDimensions({ width: canvasWidth, height });
+        fabricRef.current.renderAll();
+      };
+
+      window.addEventListener("resize", handleResize);
+      return () => window.removeEventListener("resize", handleResize);
+    }, [width, height]);
 
     useImperativeHandle(ref, () => ({
-      isEmpty: () => !hasDrawn || (fabricCanvas?.getObjects().length ?? 0) === 0,
+      isEmpty: () => {
+        if (!fabricRef.current) return true;
+        return !hasDrawn || fabricRef.current.getObjects().length === 0;
+      },
       getSignatureDataURL: () => {
-        if (!fabricCanvas || fabricCanvas.getObjects().length === 0) return null;
-        return fabricCanvas.toDataURL({
+        if (!fabricRef.current || fabricRef.current.getObjects().length === 0) return null;
+        return fabricRef.current.toDataURL({
           format: "png",
           quality: 1,
           multiplier: 2,
         });
       },
       clear: () => {
-        if (!fabricCanvas) return;
-        fabricCanvas.clear();
-        fabricCanvas.backgroundColor = "#ffffff";
-        fabricCanvas.renderAll();
+        if (!fabricRef.current) return;
+        fabricRef.current.clear();
+        fabricRef.current.backgroundColor = "#ffffff";
+        fabricRef.current.renderAll();
         setHasDrawn(false);
       },
     }));
 
     const handleClear = () => {
-      if (!fabricCanvas) return;
-      fabricCanvas.clear();
-      fabricCanvas.backgroundColor = "#ffffff";
-      fabricCanvas.renderAll();
+      if (!fabricRef.current) return;
+      fabricRef.current.clear();
+      fabricRef.current.backgroundColor = "#ffffff";
+      fabricRef.current.renderAll();
       setHasDrawn(false);
     };
 
     return (
       <div className="space-y-2">
-        <div className="border-2 border-dashed border-muted-foreground/30 rounded-lg overflow-hidden bg-white">
-          <canvas ref={canvasRef} />
+        <div 
+          ref={containerRef}
+          className="border-2 border-dashed border-muted-foreground/30 rounded-lg overflow-hidden bg-white"
+          style={{ touchAction: "none" }}
+        >
+          <canvas 
+            ref={canvasRef}
+            style={{ 
+              display: "block",
+              touchAction: "none",
+              cursor: "crosshair",
+            }} 
+          />
+          {!isReady && (
+            <div 
+              className="flex items-center justify-center bg-muted/50 text-muted-foreground text-sm"
+              style={{ width, height }}
+            >
+              Loading signature pad...
+            </div>
+          )}
         </div>
         <div className="flex items-center justify-between">
           <p className="text-xs text-muted-foreground">
-            Sign above using your mouse or touch screen
+            {hasDrawn ? "Signature captured" : "Sign above using your mouse or touch screen"}
           </p>
           <Button
             type="button"
             variant="outline"
             size="sm"
             onClick={handleClear}
+            disabled={!isReady}
           >
             <Eraser className="h-4 w-4 mr-1" />
             Clear

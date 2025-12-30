@@ -373,7 +373,7 @@ const AppointmentList = ({ onRefresh }: AppointmentListProps) => {
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
+                          <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
                             <DropdownMenuItem onClick={() => navigate(`/admin/donors/${apt.donor_id}`)}>
                               View Donor
                             </DropdownMenuItem>

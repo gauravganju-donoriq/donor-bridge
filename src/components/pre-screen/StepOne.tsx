@@ -13,10 +13,29 @@ const US_STATES = [
 ];
 
 const formatPhoneNumber = (value: string): string => {
-  // Remove all non-digits
-  const digits = value.replace(/\D/g, "");
+  // Check if it starts with + (international format)
+  const startsWithPlus = value.startsWith('+');
   
-  // Format as (XXX) XXX-XXXX
+  // Remove all non-digits except leading +
+  const cleaned = startsWithPlus 
+    ? '+' + value.slice(1).replace(/\D/g, "")
+    : value.replace(/\D/g, "");
+  
+  // If international format (starts with +), allow free-form entry
+  if (startsWithPlus) {
+    // Format +91 XXXXX XXXXX for India
+    if (cleaned.startsWith('+91')) {
+      const digits = cleaned.slice(3);
+      if (digits.length === 0) return '+91';
+      if (digits.length <= 5) return `+91 ${digits}`;
+      return `+91 ${digits.slice(0, 5)} ${digits.slice(5, 10)}`;
+    }
+    // Other international numbers - just add spaces for readability
+    return cleaned;
+  }
+  
+  // US format: (XXX) XXX-XXXX
+  const digits = cleaned;
   if (digits.length === 0) return "";
   if (digits.length <= 3) return `(${digits}`;
   if (digits.length <= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
@@ -66,7 +85,7 @@ const StepOne = () => {
             <FormControl>
               <Input 
                 type="tel" 
-                placeholder="(555) 123-4567" 
+                placeholder="(555) 123-4567 or +91 98765 43210" 
                 error={!!fieldState.error} 
                 value={field.value}
                 onChange={(e) => {

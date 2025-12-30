@@ -485,7 +485,7 @@ const FollowUpsDashboard = () => {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
-                          {/* Show Retry button for failed calls or callback requested */}
+                          {/* Show Callback/Retry button for failed calls or callback requested */}
                           {voiceAiEnabled && followUp.donors?.cell_phone && (
                             followUp.ai_call_status === "failed" || 
                             followUp.ai_call_status === "callback_requested" ||
@@ -504,9 +504,13 @@ const FollowUpsDashboard = () => {
                               {isAiCalling ? (
                                 <Loader2 className="h-4 w-4 animate-spin" />
                               ) : (
-                                <RotateCcw className="h-4 w-4 mr-1" />
+                                <Phone className="h-4 w-4 mr-1" />
                               )}
-                              {!isAiCalling && "Retry"}
+                              {!isAiCalling && (
+                                followUp.ai_call_status === "callback_requested" || followUp.status === "callback_requested"
+                                  ? "Callback"
+                                  : "Retry"
+                              )}
                             </Button>
                           ) : voiceAiEnabled && followUp.donors?.cell_phone && !followUp.ai_call_id ? (
                             <Button 

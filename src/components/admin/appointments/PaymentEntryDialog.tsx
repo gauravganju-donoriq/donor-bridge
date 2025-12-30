@@ -172,10 +172,6 @@ const PaymentEntryDialog = ({
     }
   };
 
-  const handleVoid = () => {
-    setFormData({ ...formData, check_voided: true });
-  };
-
   const handleClear = () => {
     resetForm();
   };
@@ -321,16 +317,6 @@ const PaymentEntryDialog = ({
                   />
                   <Label htmlFor="check_mailed" className="font-normal">Check Mailed</Label>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="check_voided"
-                    checked={formData.check_voided}
-                    onCheckedChange={(checked) =>
-                      setFormData({ ...formData, check_voided: checked === true })
-                    }
-                  />
-                  <Label htmlFor="check_voided" className="font-normal text-destructive">Check Voided</Label>
-                </div>
               </div>
             </div>
             <div className="space-y-2">
@@ -347,14 +333,9 @@ const PaymentEntryDialog = ({
         </div>
 
         <DialogFooter className="flex justify-between sm:justify-between">
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={handleClear}>
-              Clear
-            </Button>
-            <Button variant="destructive" onClick={handleVoid}>
-              Void
-            </Button>
-          </div>
+          <Button variant="outline" onClick={handleClear}>
+            Clear
+          </Button>
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               Cancel

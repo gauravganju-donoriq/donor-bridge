@@ -4,11 +4,9 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 
 interface EvaluationBadgeProps {
   recommendation: string | null;
-  score?: number | null;
-  showScore?: boolean;
 }
 
-export const EvaluationBadge = ({ recommendation, score, showScore = false }: EvaluationBadgeProps) => {
+export const EvaluationBadge = ({ recommendation }: EvaluationBadgeProps) => {
   const getBadgeContent = () => {
     switch (recommendation) {
       case "suitable":
@@ -55,9 +53,6 @@ export const EvaluationBadge = ({ recommendation, score, showScore = false }: Ev
     <Badge variant="outline" className={`gap-1 ${content.className}`}>
       {content.icon}
       {content.label}
-      {showScore && score !== null && score !== undefined && (
-        <span className="ml-1 font-mono text-xs">({score})</span>
-      )}
     </Badge>
   );
 

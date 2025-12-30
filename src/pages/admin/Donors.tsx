@@ -188,6 +188,34 @@ const Donors = () => {
     if (!donorToDelete) return;
 
     try {
+      // First, unlink any webform submissions that reference this donor
+      const { error: unlinkError } = await supabase
+        .from("webform_submissions")
+        .update({ linked_donor_id: null, status: "pending" })
+        .eq("linked_donor_id", donorToDelete.id);
+
+      if (unlinkError) {
+        console.warn("Error unlinking submissions:", unlinkError);
+        // Continue anyway - the submissions might not exist
+      }
+
+      // Delete related records that have foreign key constraints
+      // Delete appointments
+      await supabase.from("appointments").delete().eq("donor_id", donorToDelete.id);
+      // Delete follow-ups
+      await supabase.from("donor_follow_ups").delete().eq("donor_id", donorToDelete.id);
+      // Delete consents
+      await supabase.from("donor_consents").delete().eq("donor_id", donorToDelete.id);
+      // Delete documents
+      await supabase.from("donor_documents").delete().eq("donor_id", donorToDelete.id);
+      // Delete notes
+      await supabase.from("donor_notes").delete().eq("donor_id", donorToDelete.id);
+      // Delete payments
+      await supabase.from("payments").delete().eq("donor_id", donorToDelete.id);
+      // Delete health questionnaires
+      await supabase.from("health_questionnaires").delete().eq("donor_id", donorToDelete.id);
+
+      // Now delete the donor
       const { error } = await supabase
         .from("donors")
         .delete()
